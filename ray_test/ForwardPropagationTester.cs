@@ -44,11 +44,12 @@ namespace ray_test
             Assert.AreEqual(0.64, nodeLayerTwoTwo.finalValue, 0.1);
 
         }
-        
+
         /**
          * Artificially add error in last nodes backpropagate functions and check the error 
          * second last nodes.
          */
+        [TestMethod]
         public void BackwardPropagationFourNodes()
         {
             //init
@@ -93,11 +94,16 @@ namespace ray_test
             //creating an artificial error and backpropagate it
             double errorOne = nodeLayerTwoOne.finalValue + 1.5;
             double errorTwo = nodeLayerTwoTwo.finalValue + 0.5;
-            nodeLayerTwoOne.Backpropagate(errorOne);
-            nodeLayerTwoOne.Backpropagate(errorTwo);
+            nodeLayerTwoOne.Backpropagate(1.5);
+            nodeLayerTwoTwo.Backpropagate(0.5);
 
-            Assert.AreEqual(0.7, nodeLayerTwoOne.errorBackProp, 0.1);
-            Assert.AreEqual(1.3, nodeLayerTwoTwo.errorBackProp, 0.1);
+            //the errors backward are shared depending on the weight, the higher the weight, the higher 
+            // the share of the error
+            Assert.AreEqual(0.7, nodeLayerOneOne.errorBackProp, 0.1);
+            Assert.AreEqual(1.3, nodeLayerOneTwo.errorBackProp, 0.1);
+
+            //the updated weight here should be slightly larger than 2.0
+            Assert.AreEqual(2.0005, connectorLayerOneTwoNodeOneOne.weight, 0.001);
         }
     }
 }

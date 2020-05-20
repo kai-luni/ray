@@ -13,7 +13,9 @@ namespace ray
         //the final value is calculated when all values from layer before arrived, its public for debugging purposes
         public double finalValue;
         //counter of messages arrived
-        private int messagesArrived;
+        private int messagesArrivedForward;
+        private int messagesArrivedFromForward;
+
         private bool finalNode;
         public double expectedFinalValue;
         public double errorBackProp;
@@ -27,7 +29,7 @@ namespace ray
             this.connectorBackward = new List<NodeConnector>();
             this.connectorForward = new List<NodeConnector>();
             value = 0.0f;
-            messagesArrived = 0;
+            messagesArrivedForward = 0;
         }
 
         public void addNodeBackward(NodeConnector connectorBackward)
@@ -47,11 +49,13 @@ namespace ray
         public void AddToValue(double valueForward)
         {
             value += valueForward;
-            messagesArrived++;
-            if (messagesArrived != connectorBackward.Count)
+            messagesArrivedForward++;
+            if (messagesArrivedForward < connectorBackward.Count)
             {
                 return;
             }
+            messagesArrivedForward = 0;
+
             finalValue = Sigmoid(value);
             if (!finalNode)
             {
@@ -60,7 +64,6 @@ namespace ray
                     nodeForward.ForwardValue(finalValue);
                 }
                 value = 0.0;
-                messagesArrived = 0;
                 return;
             }
             double errorValue = expectedFinalValue - finalValue;
@@ -73,7 +76,7 @@ namespace ray
         public void ForwardValue(double valueForward)
         {
             value = 0.0;
-            messagesArrived = 0;
+            messagesArrivedForward = 0;
 
             foreach (var nodeForward in connectorForward)
             {
@@ -87,18 +90,33 @@ namespace ray
         }
 
         /**
-         * The error is forwarded with appropriate parts to each connection
+         * The error is backwarded in shares depending on the weights
+         * of the connections in between
          */
         public void Backpropagate(double errorValue)
         {
+            //for testing TODO: other approach
+            errorBackProp += errorValue;
+            messagesArrivedFromForward++;
+            if (messagesArrivedFromForward < connectorForward.Count)
+            {
+                return;
+            }
+            messagesArrivedFromForward = 0;
+
             //we need to know all the weights combined
             double weightsBeforeCombined = connectorBackward.Sum(x => x.weight);
 
+            //weight update related
+            double weightUpdatePartTwo = finalValue * (1 - finalValue);
+            double weightUpdateBackward = errorBackProp * weightUpdatePartTwo;
+
+            //calculate the error for each weight before
             foreach (var nodeBackward in connectorBackward)
             {
                 double shareNodeConnection = nodeBackward.weight / weightsBeforeCombined;
-                double shareErrorValue = shareNodeConnection * errorValue;
-                nodeBackward.Backpropagate(shareErrorValue);
+                double errorConnection = shareNodeConnection * errorBackProp;
+                nodeBackward.Backpropagate(errorConnection, weightUpdateBackward);
             }
 
         }

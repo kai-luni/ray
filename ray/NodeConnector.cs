@@ -36,11 +36,16 @@ namespace ray
             this.nodeForward.AddToValue(this.weight * value);
         }
 
-        public void Backpropagate(double errorValue)
+        public void Backpropagate(double errorValue, double weightUpdateValueTwo)
         {
             this.errorBackProp = errorValue;
-            //TODO: how to update the weight?
+            //update the weight
+            //TODO: learning rate public static
+            double learningRate = 0.01;
+            this.weight += nodeBackward.finalValue * weightUpdateValueTwo * learningRate;
+            //pass the error on backward
             nodeBackward.Backpropagate(errorValue);
+            
         }
     }
 }
