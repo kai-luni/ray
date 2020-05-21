@@ -1,12 +1,37 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ray;
 using System;
+using System.Collections.Generic;
 
 namespace ray_test
 {
     [TestClass]
     public class ForwardPropagationTester
     {
+        /**
+         * Add a layer of Node Connectors, that connect all the nodes given
+         */
+        public static void AddNodeConnectors(ref List<PropagationNode> nodes, ref List<NodeConnector> nodeConnectors, ref List<PropagationNode> nodesNextLevel)
+        {
+            if(nodeConnectors.Count != nodes.Count * nodesNextLevel.Count)
+            {
+                throw new Exception($"Expected count of Node Connectors: {nodes.Count * nodesNextLevel.Count}, actual count: {nodeConnectors.Count}");
+            }
+
+            int counter = 0;
+            foreach(var node in nodes)
+            {
+                foreach(var nodeNextLevel in nodesNextLevel)
+                {
+                    node.addNodeForward(nodeConnectors[counter]);
+                    nodeConnectors[counter].setNodeBackward(node);
+                    nodeConnectors[counter].setNodeForward(nodeNextLevel);
+                    nodeNextLevel.addNodeBackward(nodeConnectors[counter]);
+                    counter++;
+                }
+            }
+        }
+
         [TestMethod]
         public void ForwardPropagationFourNodes()
         {
@@ -22,20 +47,27 @@ namespace ray_test
             var nodeLayerTwoOne = new PropagationNode();
             var nodeLayerTwoTwo = new PropagationNode();
 
-            nodeLayerOneOne.addNodeForward(connectorLayerOneTwoNodeOneOne);
-            nodeLayerOneOne.addNodeForward(connectorLayerOneTwoNodeOneTwo);
-            nodeLayerOneTwo.addNodeForward(connectorLayerOneTwoNodeTwoOne);
-            nodeLayerOneTwo.addNodeForward(connectorLayerOneTwoNodeTwoTwo);
+            var nodesLayerOne = new List<PropagationNode>
+            {
+                nodeLayerOneOne,
+                nodeLayerOneTwo
+            };
 
-            connectorLayerOneTwoNodeOneOne.setNodeForward(nodeLayerTwoOne);
-            connectorLayerOneTwoNodeOneTwo.setNodeForward(nodeLayerTwoTwo);
-            connectorLayerOneTwoNodeTwoOne.setNodeForward(nodeLayerTwoOne);
-            connectorLayerOneTwoNodeTwoTwo.setNodeForward(nodeLayerTwoTwo);
+            var nodeConnectorsLayerOneTwo = new List<NodeConnector>
+            {
+                connectorLayerOneTwoNodeOneOne,
+                connectorLayerOneTwoNodeOneTwo,
+                connectorLayerOneTwoNodeTwoOne,
+                connectorLayerOneTwoNodeTwoTwo
+            };
 
-            nodeLayerTwoOne.addNodeBackward(connectorLayerOneTwoNodeOneOne);
-            nodeLayerTwoOne.addNodeBackward(connectorLayerOneTwoNodeTwoOne);
-            nodeLayerTwoTwo.addNodeBackward(connectorLayerOneTwoNodeOneTwo);
-            nodeLayerTwoTwo.addNodeBackward(connectorLayerOneTwoNodeTwoTwo);
+            var nodesLayerTwo = new List<PropagationNode>
+            {
+                nodeLayerTwoOne,
+                nodeLayerTwoTwo
+            };
+
+            AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
 
             nodeLayerOneOne.ForwardValue(1.0);
             nodeLayerOneTwo.ForwardValue(0.5);
@@ -68,25 +100,27 @@ namespace ray_test
             nodeLayerTwoOne.finalValue = 1.0;
             nodeLayerTwoTwo.finalValue = 1.0;
 
-            nodeLayerOneOne.addNodeForward(connectorLayerOneTwoNodeOneOne);
-            nodeLayerOneOne.addNodeForward(connectorLayerOneTwoNodeOneTwo);
-            nodeLayerOneTwo.addNodeForward(connectorLayerOneTwoNodeTwoOne);
-            nodeLayerOneTwo.addNodeForward(connectorLayerOneTwoNodeTwoTwo);
+            var nodesLayerOne = new List<PropagationNode>
+            {
+                nodeLayerOneOne,
+                nodeLayerOneTwo
+            };
 
-            connectorLayerOneTwoNodeOneOne.setNodeForward(nodeLayerTwoOne);
-            connectorLayerOneTwoNodeOneTwo.setNodeForward(nodeLayerTwoTwo);
-            connectorLayerOneTwoNodeTwoOne.setNodeForward(nodeLayerTwoOne);
-            connectorLayerOneTwoNodeTwoTwo.setNodeForward(nodeLayerTwoTwo);
+            var nodeConnectorsLayerOneTwo = new List<NodeConnector>
+            {
+                connectorLayerOneTwoNodeOneOne,
+                connectorLayerOneTwoNodeOneTwo,
+                connectorLayerOneTwoNodeTwoOne,
+                connectorLayerOneTwoNodeTwoTwo
+            };
 
-            connectorLayerOneTwoNodeOneOne.setNodeBackward(nodeLayerOneOne);
-            connectorLayerOneTwoNodeOneTwo.setNodeBackward(nodeLayerOneOne);
-            connectorLayerOneTwoNodeTwoOne.setNodeBackward(nodeLayerOneTwo);
-            connectorLayerOneTwoNodeTwoTwo.setNodeBackward(nodeLayerOneTwo);
+            var nodesLayerTwo = new List<PropagationNode>
+            {
+                nodeLayerTwoOne,
+                nodeLayerTwoTwo
+            };
 
-            nodeLayerTwoOne.addNodeBackward(connectorLayerOneTwoNodeOneOne);
-            nodeLayerTwoOne.addNodeBackward(connectorLayerOneTwoNodeTwoOne);
-            nodeLayerTwoTwo.addNodeBackward(connectorLayerOneTwoNodeOneTwo);
-            nodeLayerTwoTwo.addNodeBackward(connectorLayerOneTwoNodeTwoTwo);
+            AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
 
             nodeLayerOneOne.ForwardValue(1.0);
             nodeLayerOneTwo.ForwardValue(0.5);
