@@ -16,7 +16,9 @@ namespace ray
         private int messagesArrivedForward;
         private int messagesArrivedFromForward;
 
-        private bool finalNode;
+        //layer the node is in
+        private readonly int layer;
+
         public double expectedFinalValue;
         public double errorBackProp;
         //all the backward nodes
@@ -24,8 +26,9 @@ namespace ray
         //all the forward nodes
         List<NodeConnector> connectorForward;
 
-        public PropagationNode()
+        public PropagationNode(int layer)
         {
+            this.layer = layer;
             this.connectorBackward = new List<NodeConnector>();
             this.connectorForward = new List<NodeConnector>();
             value = 0.0f;
@@ -57,16 +60,13 @@ namespace ray
             messagesArrivedForward = 0;
 
             finalValue = Sigmoid(value);
-            if (!finalNode)
+
+            foreach (var nodeForward in connectorForward)
             {
-                foreach (var nodeForward in connectorForward)
-                {
-                    nodeForward.ForwardValue(finalValue);
-                }
-                value = 0.0;
-                return;
+                nodeForward.ForwardValue(finalValue);
             }
-            double errorValue = expectedFinalValue - finalValue;
+            value = 0.0;
+            return;
 
         }
 
@@ -75,9 +75,7 @@ namespace ray
          */
         public void ForwardValue(double valueForward)
         {
-            value = 0.0;
-            messagesArrivedForward = 0;
-
+            this.finalValue = valueForward;
             foreach (var nodeForward in connectorForward)
             {
                 nodeForward.ForwardValue(valueForward);

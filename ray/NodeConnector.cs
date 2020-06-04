@@ -40,9 +40,7 @@ namespace ray
         {
             this.errorBackProp = errorValue;
             //update the weight
-            //TODO: learning rate public static
-            double learningRate = 0.01;
-            this.weight += nodeBackward.finalValue * weightUpdateValueTwo * learningRate;
+            this.weight += nodeBackward.finalValue * weightUpdateValueTwo * LearningParameters.LearningRate;
             //pass the error on backward
             nodeBackward.Backpropagate(errorValue);
             
