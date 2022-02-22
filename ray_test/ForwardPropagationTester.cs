@@ -32,6 +32,38 @@ namespace ray_test
             }
         }
 
+        
+        /// <summary>
+        /// Check if the Node is waiting for all inputs and calculating the forward
+        /// Sigmoid calculation properly
+        /// </summary>
+        [TestMethod]
+        public void ForwardOneNode()
+        {
+            var ncOne = new NodeConnector(1.0);
+            var ncTwo = new NodeConnector(1.0);
+            var ncThree = new NodeConnector(1.0);
+            var nodeLayerOneOne = new PropagationNode(1);
+
+            nodeLayerOneOne.addNodeBackward(ncOne);
+            nodeLayerOneOne.addNodeBackward(ncTwo);
+            nodeLayerOneOne.addNodeBackward(ncThree);
+
+            ncOne.setNodeForward(nodeLayerOneOne);
+            ncTwo.setNodeForward(nodeLayerOneOne);
+            ncThree.setNodeForward(nodeLayerOneOne);
+
+            ncOne.ForwardValue(0.2);
+            ncTwo.ForwardValue(0.3);
+            ncThree.ForwardValue(0.4);
+            Assert.AreEqual(nodeLayerOneOne.finalValue, 0.7109, 0.01);
+
+            ncOne.ForwardValue(0.2);
+            ncTwo.ForwardValue(0.1);
+            ncThree.ForwardValue(0.1);
+            Assert.AreEqual(nodeLayerOneOne.finalValue, 0.598, 0.01);
+        }
+
         /**
          * check out if forward propagation in a simple neural network
          * with 2 nodes in 2 layers each works correctly
@@ -78,7 +110,6 @@ namespace ray_test
 
             Assert.AreEqual(0.74, nodeLayerTwoOne.finalValue, 0.1);
             Assert.AreEqual(0.64, nodeLayerTwoTwo.finalValue, 0.1);
-
         }
 
         /**
@@ -137,6 +168,61 @@ namespace ray_test
             //the updated weight here should be slightly larger than 2.0
             Assert.AreEqual(2.0005, connectorLayerOneTwoNodeOneOne.weight, 0.001);
         }
+
+        /// <summary>
+        /// Another backpropagation test with 4 nodes
+        /// </summary>
+        [TestMethod]
+        public void BackwardPropagationFourNodesTwo()
+        {
+            //init
+            var nodeLayerOneOne = new PropagationNode(1);
+            var nodeLayerOneTwo = new PropagationNode(1);
+            nodeLayerOneOne.finalValue = 1.0;
+            nodeLayerOneTwo.finalValue = 1.0;
+
+            var connectorLayerOneTwoNodeOneOne = new NodeConnector(3.0);
+            var connectorLayerOneTwoNodeOneTwo = new NodeConnector(1.0);
+            var connectorLayerOneTwoNodeTwoOne = new NodeConnector(2.0);
+            var connectorLayerOneTwoNodeTwoTwo = new NodeConnector(7.0);
+
+            var nodeLayerTwoOne = new PropagationNode(2);
+            var nodeLayerTwoTwo = new PropagationNode(2);
+            nodeLayerTwoOne.finalValue = 1.0;
+            nodeLayerTwoTwo.finalValue = 1.0;
+
+            var nodesLayerOne = new List<PropagationNode>
+            {
+                nodeLayerOneOne,
+                nodeLayerOneTwo
+            };
+
+            var nodeConnectorsLayerOneTwo = new List<NodeConnector>
+            {
+                connectorLayerOneTwoNodeOneOne,
+                connectorLayerOneTwoNodeOneTwo,
+                connectorLayerOneTwoNodeTwoOne,
+                connectorLayerOneTwoNodeTwoTwo
+            };
+
+            var nodesLayerTwo = new List<PropagationNode>
+            {
+                nodeLayerTwoOne,
+                nodeLayerTwoTwo
+            };
+
+            AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
+
+            //backpropagate
+            nodeLayerTwoOne.Backpropagate(0.7);
+            nodeLayerTwoTwo.Backpropagate(1.3);
+
+            //the errors backward are shared depending on the weight, the higher the weight, the higher 
+            // the share of the error
+            Assert.AreEqual(0.5825, nodeLayerOneOne.errorBackProp, 0.01);
+            Assert.AreEqual(1.4175, nodeLayerOneTwo.errorBackProp, 0.01);
+        }
+
 
         /**
          * 3 layers with 2 nodes each, forward and backbard propagation

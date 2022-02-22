@@ -66,8 +66,8 @@ namespace ray
                 nodeForward.ForwardValue(finalValue);
             }
             value = 0.0;
-            return;
 
+            return;
         }
 
         /**
