@@ -24,7 +24,7 @@ namespace ray
         //all the backward nodes
         List<NodeConnector> connectorBackward;
         //all the forward nodes
-        List<NodeConnector> connectorForward;
+        public List<NodeConnector> connectorForward;
 
         public PropagationNode(int layer)
         {
@@ -61,7 +61,7 @@ namespace ray
 
             finalValue = Sigmoid(value);
 
-            foreach (var nodeForward in connectorForward)
+            foreach (var nodeForward in this.connectorForward)
             {
                 nodeForward.ForwardValue(finalValue);
             }
@@ -76,7 +76,7 @@ namespace ray
         public void ForwardValue(double valueForward)
         {
             this.finalValue = valueForward;
-            foreach (var nodeForward in connectorForward)
+            foreach (var nodeForward in this.connectorForward)
             {
                 nodeForward.ForwardValue(valueForward);
             }

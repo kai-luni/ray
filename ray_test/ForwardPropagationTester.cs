@@ -7,32 +7,7 @@ namespace ray_test
 {
     [TestClass]
     public class ForwardPropagationTester
-    {
-        /**
-         * Add a layer of Node Connectors, that connect all the nodes given
-         */
-        public static void AddNodeConnectors(ref List<PropagationNode> nodes, ref List<NodeConnector> nodeConnectors, ref List<PropagationNode> nodesNextLevel)
-        {
-            if(nodeConnectors.Count != nodes.Count * nodesNextLevel.Count)
-            {
-                throw new Exception($"Expected count of Node Connectors: {nodes.Count * nodesNextLevel.Count}, actual count: {nodeConnectors.Count}");
-            }
-
-            int counter = 0;
-            foreach(var node in nodes)
-            {
-                foreach(var nodeNextLevel in nodesNextLevel)
-                {
-                    node.addNodeForward(nodeConnectors[counter]);
-                    nodeConnectors[counter].setNodeBackward(node);
-                    nodeConnectors[counter].setNodeForward(nodeNextLevel);
-                    nodeNextLevel.addNodeBackward(nodeConnectors[counter]);
-                    counter++;
-                }
-            }
-        }
-
-        
+    {        
         /// <summary>
         /// Check if the Node is waiting for all inputs and calculating the forward
         /// Sigmoid calculation properly
@@ -103,7 +78,7 @@ namespace ray_test
                 nodeLayerTwoTwo
             };
 
-            AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
+            NodeConnector.AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
 
             nodeLayerOneOne.ForwardValue(1.0);
             nodeLayerOneTwo.ForwardValue(0.5);
@@ -154,7 +129,7 @@ namespace ray_test
                 nodeLayerTwoTwo
             };
 
-            AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
+            NodeConnector.AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
 
             //backpropagate
             nodeLayerTwoOne.Backpropagate(1.5);
@@ -211,7 +186,7 @@ namespace ray_test
                 nodeLayerTwoTwo
             };
 
-            AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
+            NodeConnector.AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
 
             //backpropagate
             nodeLayerTwoOne.Backpropagate(0.7);
@@ -285,8 +260,8 @@ namespace ray_test
                 nodeLayerThreeTwo
             };
 
-            AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
-            AddNodeConnectors(ref nodesLayerTwo, ref nodeConnectorsLayerTwoThree, ref nodesLayerThree);
+            NodeConnector.AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
+            NodeConnector.AddNodeConnectors(ref nodesLayerTwo, ref nodeConnectorsLayerTwoThree, ref nodesLayerThree);
 
             //Forward Propagatiom
             nodeLayerOneOne.ForwardValue(1.0);
