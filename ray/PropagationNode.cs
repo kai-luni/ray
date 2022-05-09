@@ -8,8 +8,14 @@ namespace ray
 {
     public class PropagationNode
     {
+        //bias
+        private readonly double bias;
+
+        //debug mode
+        public bool debug = false;
+
         //the value of this node, it will be forwarded to the next nodes when all messages arrived
-        private double value;
+        private List<double> values;
         //the final value is calculated when all values from layer before arrived, its public for debugging purposes
         public double finalValue;
         //counter of messages arrived
@@ -19,6 +25,9 @@ namespace ray
         //layer the node is in
         private readonly int layer;
 
+        // name of the node
+        private readonly string name;
+
         public double expectedFinalValue;
         public double errorBackProp;
         //all the backward nodes
@@ -26,12 +35,14 @@ namespace ray
         //all the forward nodes
         public List<NodeConnector> connectorForward;
 
-        public PropagationNode(int layer)
+        public PropagationNode(int layer, double bias, string weight_name = "noname")
         {
+            this.bias = bias;
+            this.name = weight_name;
             this.layer = layer;
             this.connectorBackward = new List<NodeConnector>();
             this.connectorForward = new List<NodeConnector>();
-            value = 0.0f;
+            values = new List<double>();
             messagesArrivedForward = 0;
         }
 
@@ -51,21 +62,25 @@ namespace ray
          */
         public void AddToValue(double valueForward)
         {
-            value += valueForward;
-            messagesArrivedForward++;
-            if (messagesArrivedForward < connectorBackward.Count)
+            values.Add(valueForward);
+            this.messagesArrivedForward++;
+            if (this.messagesArrivedForward < connectorBackward.Count)
             {
                 return;
             }
-            messagesArrivedForward = 0;
+            this.messagesArrivedForward = 0;
 
-            finalValue = Sigmoid(value);
+            this.finalValue = Sigmoid(values.Sum() + bias);
+            if(debug)
+            {
+                Console.WriteLine($"PropNode {this.name}: net_input {values.Sum() + bias} ,final {this.finalValue}, {string.Join(", ", this.values)}");
+            }
 
             foreach (var nodeForward in this.connectorForward)
             {
-                nodeForward.ForwardValue(finalValue);
+                nodeForward.ForwardValue(this.finalValue);
             }
-            value = 0.0;
+            values = new List<double>();
 
             return;
         }
@@ -102,20 +117,40 @@ namespace ray
             }
             messagesArrivedFromForward = 0;
 
-            //we need to know all the weights combined
-            double weightsBeforeCombined = connectorBackward.Sum(x => x.weight);
-
-            //weight update related
-            double weightUpdatePartTwo = finalValue * (1 - finalValue);
-            double weightUpdateBackward = errorBackProp * weightUpdatePartTwo;
+            var value_2 = this.finalValue * (1 - this.finalValue);
 
             //calculate the error for each weight before
             foreach (var nodeBackward in connectorBackward)
             {
-                double shareNodeConnection = nodeBackward.weight / weightsBeforeCombined;
-                double errorConnection = shareNodeConnection * errorBackProp;
-                nodeBackward.Backpropagate(errorConnection, weightUpdateBackward);
+                var value_3 = nodeBackward.out_value;
+                var error_total = errorBackProp * value_2 * value_3; 
+
+                if (debug)
+                {
+                    Console.WriteLine($"Backpropagate PropNode {this.name} weight {nodeBackward.name}: value2 {value_2} and value3 {value_3}");
+                    Console.WriteLine($"Backpropagate PropNode {this.name} weight {nodeBackward.name}: error {errorBackProp} val2 {value_2} val3 {value_3}");
+                }
+
+                nodeBackward.Backpropagate(error_total);
             }
+
+            return;
+
+
+            // //we need to know all the weights combined
+            // double weightsBeforeCombined = connectorBackward.Sum(x => x.weight);
+
+            // //weight update related
+            // double weightUpdatePartTwo = finalValue * (1 - finalValue);
+            // double weightUpdateBackward = errorBackProp * weightUpdatePartTwo;
+
+            // //calculate the error for each weight before
+            // foreach (var nodeBackward in connectorBackward)
+            // {
+            //     double shareNodeConnection = nodeBackward.weight / weightsBeforeCombined;
+            //     double errorConnection = shareNodeConnection * errorBackProp;
+            //     nodeBackward.Backpropagate(errorConnection, weightUpdateBackward);
+            // }
 
         }
     }

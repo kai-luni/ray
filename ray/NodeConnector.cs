@@ -6,15 +6,26 @@ namespace ray
 {
     public class NodeConnector
     {
+        //debug mode
+        public bool debug = false; 
+
+        //name of the node
+        public string name;
+
         //all the nodes
         PropagationNode nodeForward;
         PropagationNode nodeBackward;
+
+        //experimental
+        public double out_value;
+
         //weight of this connection
         public double weight;
         public double errorBackProp;
 
-        public NodeConnector(double weight)
-        { 
+        public NodeConnector(double weight, string name = "noname")
+        {
+            this.name = name;
             this.weight = weight;
         }
 
@@ -57,16 +68,29 @@ namespace ray
          */
         public void ForwardValue(double value)
         {
+            if(debug)
+            {
+                Console.WriteLine($"NodeConnector {this.name}: Forward weigth {this.weight} * value {value} = {this.weight * value}");
+            }
+            this.out_value = value;
             this.nodeForward.AddToValue(this.weight * value);
         }
 
-        public void Backpropagate(double errorValue, double weightUpdateValueTwo)
+        public void Backpropagate(double error_weight)
         {
-            this.errorBackProp = errorValue;
-            //update the weight
-            this.weight += nodeBackward.finalValue * weightUpdateValueTwo * LearningParameters.LearningRate;
+
+            this.weight -= LearningParameters.LearningRate * error_weight;
+
+            if (debug)
+            {
+                Console.WriteLine($"NodeConnector {this.name}: Backpropagate weight {this.weight}");
+            }
+
+            // this.errorBackProp = errorValue;
+            // //update the weight
+            // this.weight += nodeBackward.finalValue * weightUpdateValueTwo * LearningParameters.LearningRate;
             //pass the error on backward
-            nodeBackward.Backpropagate(errorValue);
+            nodeBackward.Backpropagate(error_weight);
             
         }
     }
