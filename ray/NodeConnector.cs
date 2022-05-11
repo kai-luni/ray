@@ -29,6 +29,41 @@ namespace ray
             this.weight = weight;
         }
 
+        /// <summary>
+        /// connect all_nodes layers with all_nod_connectors (weights)
+        /// </summary>
+        /// <param name="all_nodes">the nodes</param>
+        /// <param name="all_node_connectors">the weights</param>
+        public static void AddAllNodeConnectors(ref List<List<PropagationNode>> all_nodes, ref List<List<NodeConnector>> all_node_connectors)
+        {
+            //add connections between nodes
+            for (int i = 0; i < all_node_connectors.Count; i++)
+            {   
+                var nodes = all_nodes[i];
+                var nodeConnectors = all_node_connectors[i];
+                var nodesNextLevel = all_nodes[i + 1];
+
+                if(nodeConnectors.Count != nodes.Count * nodesNextLevel.Count)
+                {
+                    throw new Exception($"Expected count of Node Connectors: {nodes.Count * nodesNextLevel.Count}, actual count: {nodeConnectors.Count}");
+                }
+
+                int counter = 0;
+                foreach(var node in nodes)
+                {
+                    foreach(var nodeNextLevel in nodesNextLevel)
+                    {
+                        node.addNodeForward(nodeConnectors[counter]);
+                        nodeConnectors[counter].setNodeBackward(node);
+                        nodeConnectors[counter].setNodeForward(nodeNextLevel);
+                        nodeNextLevel.addNodeBackward(nodeConnectors[counter]);
+                        counter++;
+                    }
+                }
+
+            }
+        }
+
         /**
          * Add a layer of Node Connectors, that connect all the nodes given
          */

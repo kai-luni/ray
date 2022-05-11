@@ -1,6 +1,8 @@
 
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ray
 {
@@ -13,6 +15,86 @@ namespace ray
         {
             this.entryNodes = entryNodes;
             this.exitNodes = exitNodes;
+        }
+
+        /// <summary>
+        /// initialize the neural net with few parameters
+        /// </summary>
+        /// <param name="layersizes">size of each layer</param>
+        /// <param name="weight_sizes">size of all weights</param>
+        /// <param name="biases">bias for each layer</param>
+        /// <param name="debugs_entries">list of strings with node debug output, example: w1, o1 ...</param>
+        public NeuralNet(List<int> layersizes, List<List<double>> weight_sizes, List<double> biases, List<string> debugs_entries)
+        {
+            if(layersizes.Count != biases.Count)
+            {
+                throw new Exception("Layers and biases must have the same number of layers.");
+            }
+
+            int weight_counter = 1;
+            string node_letter = "i";
+            var all_nodes = new List<List<PropagationNode>>();
+            var all_weights = new List<List<NodeConnector>>();
+            for (int i = 0; i < layersizes.Count; i++)
+            {
+                if(i != 0 && i != (layersizes.Count -1))
+                {
+                    node_letter = "h";
+                }
+                else if (i == (layersizes.Count -1))
+                {
+                    node_letter = "o";
+                }
+                
+                var nodes = new List<PropagationNode>();
+                for (int j = 0; j < layersizes[i]; j++)
+                {
+                    string name = $"{node_letter}{j+1}";
+                    var node = new PropagationNode(i+1, biases[i], name);
+                    if (debugs_entries.Any(x => x == name))
+                    {
+                        node.debug = true;
+                    }
+                    nodes.Add(node);
+                }
+                all_nodes.Add(nodes);
+                if (i == 0) 
+                {
+                    this.entryNodes = nodes;
+                }
+                if (i == (layersizes.Count-1))
+                {
+                    this.exitNodes = nodes;
+                }
+
+                //weights
+                if (i > (layersizes.Count - 2))
+                {
+                    continue;
+                }
+
+                if (layersizes[i] * layersizes[i + 1] != weight_sizes[i].Count)
+                {
+                    throw new Exception($"Expected {layersizes[i] * layersizes[i + 1]} weights, but got {weight_sizes[i].Count}.");
+                }
+
+                var weights = new List<NodeConnector>();
+                //initilize weights for layyer i and i+1
+                for (int j = 0; j < (layersizes[i] * layersizes[i + 1]); j++)
+                {
+                    string name = $"w{weight_counter}";
+                    var connector = new NodeConnector(weight_sizes[i][j], name);
+                    if (debugs_entries.Any(x => x == name))
+                    {
+                        connector.debug = true;
+                    }
+                    weights.Add(connector);
+                    weight_counter++;
+                }
+                all_weights.Add(weights);
+            }
+
+            NodeConnector.AddAllNodeConnectors(ref all_nodes, ref all_weights);
         }
 
         /// <summary>
