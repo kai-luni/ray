@@ -16,7 +16,7 @@ namespace ray
 
         //the value of this node, it will be forwarded to the next nodes when all messages arrived
         private List<double> values;
-        //the final value is calculated when all values from layer before arrived, its public for debugging purposes
+        //the final value is calculated when all values from layer before arrived
         public double finalValue;
         //counter of messages arrived
         private int messagesArrivedForward;
@@ -26,7 +26,7 @@ namespace ray
         private readonly int layer;
 
         // name of the node
-        private readonly string name;
+        public readonly string name;
 
         public double expectedFinalValue;
         public double errorBackProp;
@@ -95,6 +95,21 @@ namespace ray
             {
                 nodeForward.ForwardValue(valueForward);
             }
+        }
+
+        /**
+         * get forward weight of a node with a certain name
+         */
+        public double GetWeightForward(string name)
+        {
+            foreach (var nodeForward in this.connectorForward)
+            {
+                if (nodeForward.name == name)
+                {
+                    return nodeForward.weight;
+                }
+            }
+            return 0;
         }
 
         private double Sigmoid(double value)

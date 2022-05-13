@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ray;
 
@@ -12,10 +13,26 @@ namespace ray_test
     [TestClass]
     public class TrainTester
     {
-        public static void Train(Numpy.NDarray<float> x, Numpy.NDarray<float> y){
-            for (int i=0; i<x.shape[0]; i++){
-                
+        public static double Train(ref NeuralNet neural_net, List<double> inputs, List<double> targets, int iterations){
+            double smallest_error = 1000.0;
+            for (int h=0; h<iterations; h++)
+            {
+                var errors = new List<double>(){};
+                var result_one = neural_net.ForwardValues(inputs);
+                for(var i=0; i<result_one.Count; i++)
+                {
+                    errors.Add(result_one[i] - targets[i]);
+                }
+                var average_error = errors.Sum() / errors.Count;
+                if (Math.Abs(average_error) < smallest_error)
+                {
+                    smallest_error = average_error;
+                }
+
+                neural_net.Backpropagate(errors);
             }
+
+            return smallest_error;
         }
 
         // [TestMethod]
@@ -77,6 +94,9 @@ namespace ray_test
         // }
 
 
+        /// <summary>
+        /// six nodes many iterations larning, see if it can learn the pattern
+        /// </summary>
         [TestMethod]
         public void TwoTwoTwo()
         {
@@ -163,6 +183,9 @@ namespace ray_test
             Debug.WriteLine("Done");
         }
 
+        /// <summary>
+        /// two nodes many iterations, see if error small
+        /// </summary>
         [TestMethod]
         public void OneOne()
         {
@@ -251,11 +274,12 @@ namespace ray_test
             Assert.AreEqual(0.0, smallest_error, 0.01);
         }
 
-        [TestMethod]
+        
         /// <summary>
         /// check new neural net class with example from
         /// https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
         /// </summary>
+        [TestMethod]
         public void ForwardBackwardSixNodesSpecificTest()
         {
             List<double> weights_layer_one = new List<double>(){0.15, 0.25, 0.20, 0.3};
@@ -280,7 +304,50 @@ namespace ray_test
             var e2 = result[1] - target_o2;
             neural_net.Backpropagate(new List<double>(){e1, e2});
 
+            foreach(var entry_node in neural_net.entryNodes)
+            {
+                if(entry_node.name == "i1")
+                {
+                    var weight_one = entry_node.GetWeightForward("w1");
+                    Assert.AreEqual(0.1498, weight_one, 0.01);
+                    var weight_two = entry_node.GetWeightForward("w2");
+                    Assert.AreEqual(0.2498, weight_two, 0.01);
+                } 
+                else if (entry_node.name == "i2")
+                {
+                    var weight_three = entry_node.GetWeightForward("w3");
+                    Assert.AreEqual(0.1996, weight_three, 0.01);
+                    var weight_four = entry_node.GetWeightForward("w4");
+                    Assert.AreEqual(0.2996, weight_four, 0.01);
+                }
+            }
+
             //TODO: check if weights are updated correctly
+        }
+
+        
+        /// <summary>
+        /// check a larger network if it minimizes the error
+        /// </summary>
+        [TestMethod]
+        public void ForwardBackwardSixNodesSpecificSuperTrainTest()
+        {
+            List<double> weights_layer_one = new List<double>(){0.15, 0.25, 0.20, 0.3};
+            List<double> weights_layer_two = new List<double>(){0.4, 0.5, 0.45, 0.55};
+            List<List<double>> weights = new List<List<double>>(){};
+            weights.Add(weights_layer_one);
+            weights.Add(weights_layer_two);
+            var neural_net = new NeuralNet(new List<int>(){2,2,2}, weights, new List<double>(){0.0, 0.35, 0.6}, new List<string>(){});
+
+
+            var values_entry = new List<double>(){0.05, 0.1};
+            var targets = new List<double>(){0.01, 0.99};
+            int iterations = 10000;
+
+            var smallest_error = Train(ref neural_net, values_entry, targets, iterations);
+
+            Debug.WriteLine(smallest_error);
+            Assert.AreEqual(0.0, smallest_error, 0.01);
         }
     }
 }
