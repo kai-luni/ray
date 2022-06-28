@@ -6,6 +6,5 @@ namespace ray
 {
     public static class LearningParameters
     {
-        public static double LearningRate = 0.5;
     }
 }

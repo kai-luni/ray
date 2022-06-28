@@ -73,7 +73,7 @@ namespace ray
             this.finalValue = Sigmoid(values.Sum() + bias);
             if(debug)
             {
-                Console.WriteLine($"PropNode {this.name}: net_input {values.Sum() + bias} ,final {this.finalValue}, {string.Join(", ", this.values)}");
+                Console.WriteLine($"PropNode {this.name}: net_input {values.Sum() + bias} ,final {this.finalValue}, Values: [{string.Join(", ", this.values)}], bias: {bias}");
             }
 
             foreach (var nodeForward in this.connectorForward)
@@ -142,8 +142,7 @@ namespace ray
 
                 if (debug)
                 {
-                    Console.WriteLine($"Backpropagate PropNode {this.name} weight {nodeBackward.name}: value2 {value_2} and value3 {value_3}");
-                    Console.WriteLine($"Backpropagate PropNode {this.name} weight {nodeBackward.name}: error {errorBackProp} val2 {value_2} val3 {value_3}");
+                    Console.WriteLine($"Backpropagate PropNode {this.name} weight {nodeBackward.name}: error_total {error_total} >> error {errorBackProp} * val2 {value_2} * val3 {value_3}");
                 }
 
                 nodeBackward.Backpropagate(error_total);

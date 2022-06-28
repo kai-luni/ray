@@ -9,6 +9,8 @@ namespace ray
         //debug mode
         public bool debug = false; 
 
+        private readonly double learning_rate;
+
         //name of the node
         public string name;
 
@@ -23,10 +25,11 @@ namespace ray
         public double weight;
         public double errorBackProp;
 
-        public NodeConnector(double weight, string name = "noname")
+        public NodeConnector(double weight, string name = "noname", double learning_rate = 0.1)
         {
-            this.name = name;
             this.weight = weight;
+            this.name = name;
+            this.learning_rate = learning_rate;
         }
 
         /// <summary>
@@ -113,13 +116,12 @@ namespace ray
 
         public void Backpropagate(double error_weight)
         {
-
-            this.weight -= LearningParameters.LearningRate * error_weight;
-
             if (debug)
             {
-                Console.WriteLine($"NodeConnector {this.name}: Backpropagate weight {this.weight}");
+                Console.WriteLine($"NodeConnector {this.name}: Backpropagate: New Weight is {this.weight - this.learning_rate * error_weight}, calculate {this.weight} -= {this.learning_rate} * {error_weight}");
             }
+
+            this.weight -= this.learning_rate * error_weight;
 
             // this.errorBackProp = errorValue;
             // //update the weight

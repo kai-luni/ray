@@ -24,7 +24,8 @@ namespace ray
         /// <param name="weight_sizes">size of all weights</param>
         /// <param name="biases">bias for each layer</param>
         /// <param name="debugs_entries">list of strings with node debug output, example: w1, o1 ...</param>
-        public NeuralNet(List<int> layersizes, List<List<double>> weight_sizes, List<double> biases, List<string> debugs_entries)
+        /// <param name="learning_rate">learning rate for training</param>
+        public NeuralNet(List<int> layersizes, List<List<double>> weight_sizes, List<double> biases, List<string> debugs_entries, double learning_rate = 0.1)
         {
             if(layersizes.Count != biases.Count)
             {
@@ -83,7 +84,7 @@ namespace ray
                 for (int j = 0; j < (layersizes[i] * layersizes[i + 1]); j++)
                 {
                     string name = $"w{weight_counter}";
-                    var connector = new NodeConnector(weight_sizes[i][j], name);
+                    var connector = new NodeConnector(weight_sizes[i][j], name, learning_rate: learning_rate);
                     if (debugs_entries.Any(x => x == name))
                     {
                         connector.debug = true;
@@ -129,7 +130,7 @@ namespace ray
                 throw new System.Exception("Error Values need to be same count as Exit Nodes count.");
             }
 
-            for (int i = 0; i < entryNodes.Count; i++)
+            for (int i = 0; i < exitNodes.Count; i++)
             {
                 exitNodes[i].Backpropagate(errors[i]);
             }
