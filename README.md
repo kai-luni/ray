@@ -1,6 +1,10 @@
 # ray
 Building a Neural Network with "Inventing on Principle" in mind
 
+2022-05-13
+
+Took two years! Backpropagation is working. Next is testing it on the MNIST database and see if it works reliably. If thats the case then the next goal is to execute it on multiple threads.
+
 2020-05-17
 
 In the last years I spent some time working with Neural Networks and I never really got over the point of trying stuff out in the hope it works and often it did not. After a while it became frustrating and progress seemed like winning the Lottery. How can I improve the network when I barely understand it? Sure I learned the math behind it, but after a week I forgot half of it and the matrices make the whole matter rather abstract. I am a Software developer and I want to see whats happening in my software, not let it run for 10 hours in a quasi black box to get some result I can just hope to have a good result. Is it possible to really debug deep learning? I dont know, but I want to try.
