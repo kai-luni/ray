@@ -17,6 +17,7 @@ namespace ray_test
         [TestMethod]
         public void TwoTwoTwo()
         {
+            //initialize variables
             double bias_one = 0.35;
             double bias_two = 0.6;
 
