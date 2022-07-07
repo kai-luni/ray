@@ -114,20 +114,20 @@ namespace ray
             this.nodeForward.AddToValue(this.weight * value);
         }
 
-        public void Backpropagate(double error_weight)
+        public void Backpropagate(double error_weight, double? output_forward_node)
         {
             if (debug)
             {
                 Console.WriteLine($"NodeConnector {this.name}: Backpropagate: New Weight is {this.weight - this.learning_rate * error_weight}, calculate {this.weight} -= {this.learning_rate} * {error_weight}");
             }
-
+            var weight_orig = this.weight;
             this.weight -= this.learning_rate * error_weight;
 
             // this.errorBackProp = errorValue;
             // //update the weight
             // this.weight += nodeBackward.finalValue * weightUpdateValueTwo * LearningParameters.LearningRate;
             //pass the error on backward
-            nodeBackward.Backpropagate(error_weight);
+            nodeBackward.Backpropagate(error_weight, weight_orig, output_forward_node);
             
         }
     }

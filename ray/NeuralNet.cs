@@ -132,7 +132,7 @@ namespace ray
 
             for (int i = 0; i < exitNodes.Count; i++)
             {
-                exitNodes[i].Backpropagate(errors[i]);
+                exitNodes[i].Backpropagate(errors[i], null, null);
             }
         }
     }
