@@ -20,7 +20,6 @@ namespace ray
         public double errorBackProp;
         public double finalValue;
         //counter of messages arrived
-        private int messagesArrivedForward;
         private int messagesArrivedFromForward;
 
         //layer the node is in
@@ -44,7 +43,7 @@ namespace ray
             this.connectorBackward = new List<NodeConnector>();
             this.connectorForward = new List<NodeConnector>();
             values = new List<double>();
-            messagesArrivedForward = 0;
+            this.messagesArrivedFromForward = 0;
         }
 
         public void addNodeBackward(NodeConnector connectorBackward)
@@ -58,18 +57,18 @@ namespace ray
         }
 
         /**
-         * the incomin value here will be stored with other incoming values, once all nodes in the layer before sent
-         * their message, the value will be processes with the activation function
+         * the incoming value here will be stored with other incoming values, once all nodes in the layer before sent
+         * their message, the value will be processed with the activation function
          */
         public void AddToValue(double valueForward)
         {
             values.Add(valueForward);
-            this.messagesArrivedForward++;
-            if (this.messagesArrivedForward < connectorBackward.Count)
+            this.messagesArrivedFromForward++;
+            if (this.messagesArrivedFromForward < connectorBackward.Count)
             {
                 return;
             }
-            this.messagesArrivedForward = 0;
+            this.messagesArrivedFromForward = 0;
 
             this.finalValue = Sigmoid(values.Sum() + bias);
             if(debug)
@@ -123,20 +122,18 @@ namespace ray
         /// The error is backwarded in shares depending on the weights
         /// of the connections in between
         /// </summary>
-        /// <param name="errorForward">error value calculated for this branch from forward</param>
+        /// <param name="errorFromAhead">error value calculated for this branch from forward</param>
         /// <param name="weightForwardOrig">original weight of the forward connection</param>
-        /// <param name="output_forward_node">the output node ahead in current branch</param>
-        public void Backpropagate(double errorForward, double? weightForwardOrig, double? output_forward_node)
+        /// <param name="output_node_ahead">the output node ahead in current branch</param>
+        public void Backpropagate(double errorFromAhead, double? weightForwardOrig, double? output_node_ahead)
         {
-            //for testing TODO: other approach
-            //errorBackProp += errorValue;
-            //this.messagesArrivedFromForward++;
-            double error_temp = output_forward_node ?? 1.0 * errorForward * weightForwardOrig ?? 1.0 * this.finalValue;
+            double output_to_sum = this.finalValue * (1 - this.finalValue);
+            double output_ahead_to_sum = output_node_ahead * (1 - output_node_ahead) ?? 1.0;
+            double error_temp = output_ahead_to_sum * errorFromAhead * (weightForwardOrig ?? 1.0) * output_to_sum;
             this.errorValues.Add(error_temp);
             if (debug)
             {
-                Console.WriteLine($"PropNode {this.name}: PartError {this.errorValues.Count}: {error_temp} = output_forward_node:{output_forward_node} * errorForward:{errorForward} * weightForwardOrig:{weightForwardOrig} * finalValue:{this.finalValue}");
-                //Console.WriteLine($"PropNode {this.name}: error {messagesArrivedFromForward}: {errorValue}, new errorBackProp {errorBackProp}");
+                Console.WriteLine($"Backpropagate PropNode {this.name}: PartError {this.errorValues.Count}: {error_temp} = output_ahead_to_sum:{output_ahead_to_sum} * errorFromAhead:{errorFromAhead} * weightForwardOrig:{weightForwardOrig ?? 1.0} * output_to_sum:{output_to_sum}");
             }
             
             if (this.errorValues.Count < connectorForward.Count)
@@ -152,14 +149,14 @@ namespace ray
             {
                 // var value_3 = nodeBackward.out_value;
                 // var error_total = errorBackProp * value_2 * value_3;
-                double errorNodeBackward = 0; 
+                double errorToApplyBackward = 0; 
                 for(int i = 0; i < errorValues.Count; i++)
                 {
                     var errorTemp = errorValues[i] * nodeBackward.out_value;
-                    errorNodeBackward += errorTemp;
+                    errorToApplyBackward += errorTemp;
                     if(debug)
                     {
-                        Console.WriteLine($"PropNode {this.name}: error {i+1}: error_temp:{error_temp} = {errorValues[i]} * nodeBackward.out_value:{nodeBackward.out_value}");
+                        Console.WriteLine($"PropNode {this.name}: error {i+1}: error_temp:{errorTemp} = {errorValues[i]} * nodeBackward.out_value:{nodeBackward.out_value}");
                     }
                 }
                 //if (debug)
@@ -167,7 +164,7 @@ namespace ray
                     //Console.WriteLine($"Backpropagate PropNode {this.name} weight {nodeBackward.name}: error_total {error_total} >> error {errorBackProp} * val2 {value_2} * val3 {value_3}");
                 //}
 
-                nodeBackward.Backpropagate(errorNodeBackward, this.finalValue);
+                nodeBackward.Backpropagate(errorToApplyBackward, this.finalValue, errorFromAhead);
             }
 
             return;

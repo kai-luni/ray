@@ -114,7 +114,13 @@ namespace ray
             this.nodeForward.AddToValue(this.weight * value);
         }
 
-        public void Backpropagate(double error_weight, double? output_forward_node)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="error_weight">error to update on this weight</param>
+        /// <param name="output_node_ahead">output from node ahead</param>
+        /// <param name="error_from_ahead">the error from ahead</param>
+        public void Backpropagate(double error_weight, double? output_node_ahead, double error_from_ahead)
         {
             if (debug)
             {
@@ -127,7 +133,7 @@ namespace ray
             // //update the weight
             // this.weight += nodeBackward.finalValue * weightUpdateValueTwo * LearningParameters.LearningRate;
             //pass the error on backward
-            nodeBackward.Backpropagate(error_weight, weight_orig, output_forward_node);
+            nodeBackward.Backpropagate(error_from_ahead, weight_orig, output_node_ahead);
             
         }
     }
