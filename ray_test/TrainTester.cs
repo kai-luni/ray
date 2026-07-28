@@ -108,7 +108,7 @@ namespace ray_test
             var biases = new List<double>(){0.0, bias_one, bias_two};
             double learning_rate = 0.6;
             var targets = new List<double>(){0.05, 0.95};
-            List<int> layer_sizes = new List<int>(){2,2,2};
+            List<int> layer_sizes = [2,2,2];
             var weights_one_two = new List<double>(){0.1,0.2,0.3,0.4};
             var weights_two_three = new List<double>(){0.5,0.7,0.6,0.8};
             var all_weights = new List<List<double>>(){weights_one_two, weights_two_three};
@@ -117,6 +117,8 @@ namespace ray_test
 
             var neural_net = new NeuralNet(layer_sizes, all_weights, biases, new List<string>(){"h1", "h2", "o1", "w5", "w6", "w7", "w1"}, learning_rate);
             var outputs = neural_net.ForwardValues(new List<double>(){0.1, 0.5});
+            Assert.AreEqual(0.734928613, outputs[0], 0.000001);
+            Assert.AreEqual(0.779553884, outputs[1], 0.000001);
             neural_net.Backpropagate(new List<double>(){outputs[0] - targets[0], outputs[1] - targets[1]});
         }
 
