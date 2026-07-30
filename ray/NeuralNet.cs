@@ -106,7 +106,7 @@ namespace ray
         {
             if (values.Count != entryNodes.Count)
             {
-                throw new System.Exception("Entry Values need to be same count as Entry Nodes count.");
+                throw new Exception("Entry Values need to be same count as Entry Nodes count.");
             }
 
             for (int i = 0; i < entryNodes.Count; i++)
@@ -115,7 +115,7 @@ namespace ray
             }
 
             var return_list = new List<double>(){};
-            foreach (var exitNode in this.exitNodes)
+            foreach (var exitNode in exitNodes)
             {
                 return_list.Add(exitNode.finalValue);
             }
@@ -127,7 +127,7 @@ namespace ray
         {
             if (errors.Count != exitNodes.Count)
             {
-                throw new System.Exception("Error Values need to be same count as Exit Nodes count.");
+                throw new Exception("Error Values need to be same count as Exit Nodes count.");
             }
 
             for (int i = 0; i < exitNodes.Count; i++)

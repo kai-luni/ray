@@ -14,7 +14,7 @@ namespace ray
         //debug mode
         public bool debug = false;
         //current errorValue for backprop
-        private List<double> errorValues = new List<double>();
+        private readonly List<double> _errorValues = [];
         //the final value is calculated when all values from layer before arrived
         public double expectedFinalValue;
         public double errorBackProp;
@@ -38,12 +38,12 @@ namespace ray
         public PropagationNode(int layer, double bias, string weight_name = "noname")
         {
             this.bias = bias;
-            this.name = weight_name;
+            name = weight_name;
             this.layer = layer;
-            this.connectorBackward = new List<NodeConnector>();
-            this.connectorForward = new List<NodeConnector>();
+            connectorBackward = new List<NodeConnector>();
+            connectorForward = new List<NodeConnector>();
             values = new List<double>();
-            this.messagesArrivedFromForward = 0;
+            messagesArrivedFromForward = 0;
         }
 
         public void addNodeBackward(NodeConnector connectorBackward)
@@ -63,22 +63,22 @@ namespace ray
         public void AddToValue(double valueForward)
         {
             values.Add(valueForward);
-            this.messagesArrivedFromForward++;
-            if (this.messagesArrivedFromForward < connectorBackward.Count)
+            messagesArrivedFromForward++;
+            if (messagesArrivedFromForward < connectorBackward.Count)
             {
                 return;
             }
-            this.messagesArrivedFromForward = 0;
+            messagesArrivedFromForward = 0;
 
-            this.finalValue = Sigmoid(values.Sum() + bias);
+            finalValue = Sigmoid(values.Sum() + bias);
             if(debug)
             {
-                Console.WriteLine($"PropNode {this.name}: net_input {values.Sum() + bias} ,final {this.finalValue}, Values: [{string.Join(", ", this.values)}], bias: {bias}");
+                Console.WriteLine($"PropNode {name}: net_input {values.Sum() + bias} ,final {finalValue}, Values: [{string.Join(", ", values)}], bias: {bias}");
             }
 
-            foreach (var nodeForward in this.connectorForward)
+            foreach (var nodeForward in connectorForward)
             {
-                nodeForward.ForwardValue(this.finalValue);
+                nodeForward.ForwardValue(finalValue);
             }
             values = new List<double>();
 
@@ -90,8 +90,8 @@ namespace ray
          */
         public void ForwardValue(double valueForward)
         {
-            this.finalValue = valueForward;
-            foreach (var nodeForward in this.connectorForward)
+            finalValue = valueForward;
+            foreach (var nodeForward in connectorForward)
             {
                 nodeForward.ForwardValue(valueForward);
             }
@@ -102,7 +102,7 @@ namespace ray
          */
         public double GetWeightForward(string name)
         {
-            foreach (var nodeForward in this.connectorForward)
+            foreach (var nodeForward in connectorForward)
             {
                 if (nodeForward.name == name)
                 {
@@ -127,44 +127,51 @@ namespace ray
         /// <param name="output_node_ahead">the output node ahead in current branch</param>
         public void Backpropagate(double errorFromAhead, double? weightForwardOrig, double? output_node_ahead)
         {
-            double output_to_sum = this.finalValue * (1 - this.finalValue);
+            double output_to_sum = finalValue * (1 - finalValue);
             double output_ahead_to_sum = output_node_ahead * (1 - output_node_ahead) ?? 1.0;
             double error_temp = output_ahead_to_sum * errorFromAhead * (weightForwardOrig ?? 1.0) * output_to_sum;
-            this.errorValues.Add(error_temp);
+            _errorValues.Add(error_temp);
             if (debug)
             {
-                Console.WriteLine($"Backpropagate PropNode {this.name}: PartError {this.errorValues.Count}: {error_temp} = output_ahead_to_sum:{output_ahead_to_sum} * errorFromAhead:{errorFromAhead} * weightForwardOrig:{weightForwardOrig ?? 1.0} * output_to_sum:{output_to_sum}");
+                Console.WriteLine($"Backpropagate PropNode {name}: PartError {_errorValues.Count}: {error_temp} = output_ahead_to_sum:{output_ahead_to_sum} * errorFromAhead:{errorFromAhead} * weightForwardOrig:{weightForwardOrig ?? 1.0} * output_to_sum:{output_to_sum}");
             }
             
-            if (this.errorValues.Count < connectorForward.Count)
+            // we are not ready to backpropagate yet, we need to wait for all messages from forward
+            if (_errorValues.Count < connectorForward.Count)
             {
                 return;
             }
-            messagesArrivedFromForward = 0;
-
-            var value_2 = this.finalValue * (1 - this.finalValue);
-
-            //calculate the error for each weight before
-            foreach (var nodeBackward in connectorBackward)
+            // error state: too many error values in memory, when connectorForward Count is 0, then we expect one error, because its the output node
+            if (connectorForward.Count == 0 && _errorValues.Count > 1 || connectorForward.Count > 0 &&  _errorValues.Count > connectorForward.Count)
             {
-                // var value_3 = nodeBackward.out_value;
-                // var error_total = errorBackProp * value_2 * value_3;
-                double errorToApplyBackward = 0; 
-                for(int i = 0; i < errorValues.Count; i++)
-                {
-                    var errorTemp = errorValues[i] * nodeBackward.out_value;
-                    errorToApplyBackward += errorTemp;
-                    if(debug)
-                    {
-                        Console.WriteLine($"PropNode {this.name}: error {i+1}: error_temp:{errorTemp} = {errorValues[i]} * nodeBackward.out_value:{nodeBackward.out_value}");
-                    }
-                }
-                //if (debug)
-                //{
-                    //Console.WriteLine($"Backpropagate PropNode {this.name} weight {nodeBackward.name}: error_total {error_total} >> error {errorBackProp} * val2 {value_2} * val3 {value_3}");
-                //}
+                throw new Exception($"Backpropagate PropNode {name}: Error: _errorValues.Count {_errorValues.Count} > connectorForward.Count {connectorForward.Count}");
+            }
 
-                nodeBackward.Backpropagate(errorToApplyBackward, this.finalValue, errorFromAhead);
+            try
+            {
+                messagesArrivedFromForward = 0;
+    
+                //calculate the error for each weight before
+                foreach (var nodeBackward in connectorBackward)
+                {
+                    double errorToApplyBackward = 0; 
+                    for(int i = 0; i < _errorValues.Count; i++)
+                    {
+                        var errorTemp = _errorValues[i] * nodeBackward.out_value;
+                        errorToApplyBackward += errorTemp;
+                        if(debug)
+                        {
+                            Console.WriteLine($"PropNode {name}: error {i+1}: error_temp:{errorTemp} = {_errorValues[i]} * nodeBackward.out_value:{nodeBackward.out_value}");
+                        }
+                    }
+    
+                    nodeBackward.Backpropagate(errorToApplyBackward, finalValue, errorFromAhead);
+                }
+            }
+            finally
+            {
+                //we are done, clear the error values for next round
+                _errorValues.Clear();                
             }
 
             return;

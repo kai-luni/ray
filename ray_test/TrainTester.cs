@@ -119,109 +119,144 @@ namespace ray_test
             var outputs = neural_net.ForwardValues(new List<double>(){0.1, 0.5});
             Assert.AreEqual(0.734928613, outputs[0], 0.000001);
             Assert.AreEqual(0.779553884, outputs[1], 0.000001);
-            neural_net.Backpropagate(new List<double>(){outputs[0] - targets[0], outputs[1] - targets[1]});
+            neural_net.Backpropagate([outputs[0] - targets[0], outputs[1] - targets[1]]);
         }
 
 
-        // [TestMethod]
-        // public void TwoTwoTwoAndTwoSamples()
-        // {
-        //     double bias_one = 0.35;
-        //     double bias_two = 0.6;
-        //     double learning_rate = 2.2;
-        //     int iterations = 10;
+        [TestMethod]
+        public void TwoTwoTwoAndTwoSamples()
+        {
+            double bias_one = 0.35;
+            double bias_two = 0.6;
+            double learning_rate = 0.5;
+            int iterations = 10000;
 
-        //     //init
-        //     var nodeLayerOneOne = new PropagationNode(1, 0.0, "i1");
-        //     var nodeLayerOneTwo = new PropagationNode(1, 0.0, "i2");
+            //init
+            var nodeLayerOneOne = new PropagationNode(1, 0.0, "i1");
+            var nodeLayerOneTwo = new PropagationNode(1, 0.0, "i2");
 
-        //     var connectorLayerOneTwoNodeOneOne = new NodeConnector(0.15, "w1", learning_rate: learning_rate);
-        //     var connectorLayerOneTwoNodeTwoOne = new NodeConnector(0.2, "w2", learning_rate: learning_rate);
-        //     var connectorLayerOneTwoNodeOneTwo = new NodeConnector(0.25, "w3", learning_rate: learning_rate);
-        //     var connectorLayerOneTwoNodeTwoTwo = new NodeConnector(0.3, "w4", learning_rate: learning_rate);
+            var connectorLayerOneTwoNodeOneOne = new NodeConnector(0.15, "w1", learning_rate: learning_rate);
+            var connectorLayerOneTwoNodeTwoOne = new NodeConnector(0.2, "w2", learning_rate: learning_rate);
+            var connectorLayerOneTwoNodeOneTwo = new NodeConnector(0.25, "w3", learning_rate: learning_rate);
+            var connectorLayerOneTwoNodeTwoTwo = new NodeConnector(0.3, "w4", learning_rate: learning_rate);
 
-        //     var nodeLayerTwoOne = new PropagationNode(2, bias_one, "h1");
-        //     var nodeLayerTwoTwo = new PropagationNode(2, bias_one, "h2");
+            var nodeLayerTwoOne = new PropagationNode(2, bias_one, "h1");
+            var nodeLayerTwoTwo = new PropagationNode(2, bias_one, "h2");
 
-        //     var connectorLayerTwoThreeNodeOneOne = new NodeConnector(0.4, "w5", learning_rate: learning_rate);
-        //     var connectorLayerTwoThreeNodeTwoOne = new NodeConnector(0.45, "w6", learning_rate: learning_rate);
-        //     var connectorLayerTwoThreeNodeOneTwo = new NodeConnector(0.5, "w7", learning_rate: learning_rate);
-        //     var connectorLayerTwoThreeNodeTwoTwo = new NodeConnector(0.55, "w8", learning_rate: learning_rate);
+            var connectorLayerTwoThreeNodeOneOne = new NodeConnector(0.4, "w5", learning_rate: learning_rate);
+            var connectorLayerTwoThreeNodeTwoOne = new NodeConnector(0.45, "w6", learning_rate: learning_rate);
+            var connectorLayerTwoThreeNodeOneTwo = new NodeConnector(0.5, "w7", learning_rate: learning_rate);
+            var connectorLayerTwoThreeNodeTwoTwo = new NodeConnector(0.55, "w8", learning_rate: learning_rate);
 
-        //     var nodeLayerThreeOne = new PropagationNode(3, bias_two, "o1");
-        //     var nodeLayerThreeTwo = new PropagationNode(3, bias_two, "o2");
+            var nodeLayerThreeOne = new PropagationNode(3, bias_two, "o1");
+            var nodeLayerThreeTwo = new PropagationNode(3, bias_two, "o2");
 
-        //     var nodesLayerOne = new List<PropagationNode>
-        //     {
-        //         nodeLayerOneOne,
-        //         nodeLayerOneTwo
-        //     };
+            var nodesLayerOne = new List<PropagationNode>
+            {
+                nodeLayerOneOne,
+                nodeLayerOneTwo
+            };
 
-        //     var nodeConnectorsLayerOneTwo = new List<NodeConnector>
-        //     {
-        //         connectorLayerOneTwoNodeOneOne,
-        //         connectorLayerOneTwoNodeOneTwo,
-        //         connectorLayerOneTwoNodeTwoOne,
-        //         connectorLayerOneTwoNodeTwoTwo
-        //     };
+            var nodeConnectorsLayerOneTwo = new List<NodeConnector>
+            {
+                connectorLayerOneTwoNodeOneOne,
+                connectorLayerOneTwoNodeOneTwo,
+                connectorLayerOneTwoNodeTwoOne,
+                connectorLayerOneTwoNodeTwoTwo
+            };
 
-        //     var nodesLayerTwo = new List<PropagationNode>
-        //     {
-        //         nodeLayerTwoOne,
-        //         nodeLayerTwoTwo
-        //     };
+            var nodesLayerTwo = new List<PropagationNode>
+            {
+                nodeLayerTwoOne,
+                nodeLayerTwoTwo
+            };
 
-        //     var nodeConnectorsLayerTwoThree = new List<NodeConnector>
-        //     {
-        //         connectorLayerTwoThreeNodeOneOne,
-        //         connectorLayerTwoThreeNodeOneTwo,
-        //         connectorLayerTwoThreeNodeTwoOne,
-        //         connectorLayerTwoThreeNodeTwoTwo
-        //     };
+            var nodeConnectorsLayerTwoThree = new List<NodeConnector>
+            {
+                connectorLayerTwoThreeNodeOneOne,
+                connectorLayerTwoThreeNodeOneTwo,
+                connectorLayerTwoThreeNodeTwoOne,
+                connectorLayerTwoThreeNodeTwoTwo
+            };
 
-        //     var nodesLayerThree = new List<PropagationNode>
-        //     {
-        //         nodeLayerThreeOne,
-        //         nodeLayerThreeTwo
-        //     };
+            var nodesLayerThree = new List<PropagationNode>
+            {
+                nodeLayerThreeOne,
+                nodeLayerThreeTwo
+            };
 
-        //     NodeConnector.AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
-        //     NodeConnector.AddNodeConnectors(ref nodesLayerTwo, ref nodeConnectorsLayerTwoThree, ref nodesLayerThree);
+            NodeConnector.AddNodeConnectors(ref nodesLayerOne, ref nodeConnectorsLayerOneTwo, ref nodesLayerTwo);
+            NodeConnector.AddNodeConnectors(ref nodesLayerTwo, ref nodeConnectorsLayerTwoThree, ref nodesLayerThree);
 
-        //     var neural_net = new NeuralNet(ref nodesLayerOne, ref nodesLayerThree);
+            var neural_net = new NeuralNet(ref nodesLayerOne, ref nodesLayerThree);
 
-        //     var values_entry = new List<List<double>>(){};
-        //     values_entry.Add(new List<double>(){0.05, 0.1});
-        //     values_entry.Add(new List<double>(){0.20, 0.45});
+            var values_entry = new List<List<double>>
+            {
+                new() { 0.05, 0.1 },
+                new() { 0.20, 0.45 }
+            };
 
-        //     var targets = new List<List<double>>(){};
-        //     targets.Add(new List<double>(){0.01, 0.99});
-        //     targets.Add(new List<double>(){0.3, 0.03});
+            var targets = new List<List<double>>
+            {
+                new() { 0.01, 0.99 },
+                new() { 0.3, 0.03 }
+            };
 
-        //     double smallest_error = 1000.0;
-        //     for (int h=0; h<iterations; h++)
-        //     {
-        //         for(var hh=0; hh<1; hh++)
-        //         {
-        //             var errors = new List<double>(){};
-        //             var result_one = neural_net.ForwardValues(values_entry[hh]);
-        //             for(var i=0; i<result_one.Count; i++)
-        //             {
-        //                 errors.Add(result_one[i] - targets[hh][i]);
-        //             }
-        //             var smallest_error_temp = Math.Abs(errors.Select(x => Math.Abs(x)).Sum() / errors.Count());
-        //             if (smallest_error_temp < smallest_error)
-        //             {
-        //                 smallest_error = smallest_error_temp;
-        //             }
+            double smallest_error = 1000.0;
+            for (int h=0; h<iterations; h++)
+            {
+                for(var hh=0; hh < values_entry.Count; hh++)
+                {
+                    var errors = new List<double>(){};
+                    var result_one = neural_net.ForwardValues(values_entry[hh]);
+                    for(var i=0; i<result_one.Count; i++)
+                    {
+                        errors.Add(result_one[i] - targets[hh][i]);
+                    }
+                    var smallest_error_temp = Math.Abs(errors.Sum(Math.Abs) / errors.Count);
+                    if (smallest_error_temp < smallest_error)
+                    {
+                        smallest_error = smallest_error_temp;
+                    }
 
-        //             neural_net.Backpropagate(errors);
-        //         }
-        //     }
+                    neural_net.Backpropagate(errors);
+                }
+            }
 
-        //     Debug.WriteLine(smallest_error);
-        //     Assert.AreEqual(0.0, smallest_error, 0.01);
-        // }
+            Debug.WriteLine(smallest_error);
+            //Assert.AreEqual(0.0, smallest_error, 0.01);
+
+            double totalAbsoluteError = 0.0;
+            int errorCount = 0;
+
+            for (int sample = 0; sample < values_entry.Count; sample++)
+            {
+                var outputs = neural_net.ForwardValues(values_entry[sample]);
+
+                Console.WriteLine($"Sample {sample}:");
+
+                for (int output = 0; output < outputs.Count; output++)
+                {
+                    double absoluteError =
+                        Math.Abs(outputs[output] - targets[sample][output]);
+
+                    totalAbsoluteError += absoluteError;
+                    errorCount++;
+
+                    Console.WriteLine(
+                        $"  Output {output}: " +
+                        $"Ist={outputs[output]:F6}, " +
+                        $"Soll={targets[sample][output]:F6}, " +
+                        $"Absoluter Fehler={absoluteError:F6}"
+                    );
+                }
+            }
+
+            double meanAbsoluteError = totalAbsoluteError / errorCount;
+
+            Console.WriteLine($"Gesamter absoluter Fehler: {totalAbsoluteError:F6}");
+            Console.WriteLine($"Mittlerer absoluter Fehler: {meanAbsoluteError:F6}");
+        }
 
 
         // /// <summary>
