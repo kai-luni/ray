@@ -392,7 +392,7 @@ public class TrainTester
         var values_entry_two = new List<double>(){0.1, 0.2};
         var targets_one = new List<double>(){0.01, 0.99};
         var targets_two = new List<double>(){0.69, 0.42};
-        int iterations = 10000;
+        int iterations = 100000;
 
         var x = new List<List<double>>
         {

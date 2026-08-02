@@ -51,7 +51,7 @@ namespace ray
                 for (int j = 0; j < layersizes[i]; j++)
                 {
                     string name = $"{node_letter}{j+1}";
-                    var node = new PropagationNode(i+1, biases[i], name);
+                    var node = new PropagationNode(i+1, biases[i], name, learning_rate);
                     if (debugs_entries.Any(x => x == name))
                     {
                         node.debug = true;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ray;
 
@@ -566,6 +567,131 @@ public class BackpropTest
                 "Verarbeitungsreihenfolge der Output Nodes ab."
             );
         }
+    }
+
+    /// <summary>
+    /// This test checks if the biases of the hidden and output nodes are updated correctly during backpropagation. It constructs a simple neural network with one input node, one hidden node, and one output node, and performs a forward pass followed by backpropagation. The test asserts that the biases of both the hidden and output nodes have changed after backpropagation, indicating that they were updated as expected.
+    /// </summary>
+    [TestMethod]
+    public void BackpropagationUpdatesHiddenAndOutputBiases()
+    {
+        const double learningRate = 0.1;
+        const double input = 0.5;
+        const double target = 0.8;
+
+        var inputNode = new PropagationNode(
+            layer: 1,
+            bias: 0.0,
+            weight_name: "i1"
+        );
+
+        var hiddenNode = new PropagationNode(
+            layer: 2,
+            bias: 0.25,
+            weight_name: "h1"
+        );
+
+        var outputNode = new PropagationNode(
+            layer: 3,
+            bias: -0.15,
+            weight_name: "o1"
+        );
+
+        var inputHiddenConnector = new NodeConnector(
+            weight: 0.4,
+            name: "w1",
+            learning_rate: learningRate
+        );
+
+        var hiddenOutputConnector = new NodeConnector(
+            weight: 0.7,
+            name: "w2",
+            learning_rate: learningRate
+        );
+
+        var inputNodes = new List<PropagationNode> { inputNode };
+        var hiddenNodes = new List<PropagationNode> { hiddenNode };
+        var outputNodes = new List<PropagationNode> { outputNode };
+
+        var inputHiddenConnectors = new List<NodeConnector>
+        {
+            inputHiddenConnector
+        };
+
+        var hiddenOutputConnectors = new List<NodeConnector>
+        {
+            hiddenOutputConnector
+        };
+
+        NodeConnector.AddNodeConnectors(
+            ref inputNodes,
+            ref inputHiddenConnectors,
+            ref hiddenNodes
+        );
+
+        NodeConnector.AddNodeConnectors(
+            ref hiddenNodes,
+            ref hiddenOutputConnectors,
+            ref outputNodes
+        );
+
+        var neuralNet = new NeuralNet(
+            ref inputNodes,
+            ref outputNodes
+        );
+
+        double hiddenBiasBefore = ReadPrivateBias(hiddenNode);
+        double outputBiasBefore = ReadPrivateBias(outputNode);
+
+        var outputs = neuralNet.ForwardValues([input]);
+
+        neuralNet.Backpropagate(
+        [
+            outputs[0] - target
+        ]);
+
+        double hiddenBiasAfter = ReadPrivateBias(hiddenNode);
+        double outputBiasAfter = ReadPrivateBias(outputNode);
+
+        Console.WriteLine(
+            $"Hidden bias: {hiddenBiasBefore:F10} -> {hiddenBiasAfter:F10}"
+        );
+
+        Console.WriteLine(
+            $"Output bias: {outputBiasBefore:F10} -> {outputBiasAfter:F10}"
+        );
+
+        Assert.IsTrue(
+            Math.Abs(hiddenBiasAfter - hiddenBiasBefore) > 1e-12,
+            "Der Bias des Hidden Nodes wurde durch Backpropagation nicht aktualisiert."
+        );
+
+        Assert.IsTrue(
+            Math.Abs(outputBiasAfter - outputBiasBefore) > 1e-12,
+            "Der Bias des Output Nodes wurde durch Backpropagation nicht aktualisiert."
+        );
+    }
+
+    /// <summary>
+    /// Reads the private bias field of a PropagationNode using reflection. This method is used for testing purposes to verify that the bias values are updated correctly during backpropagation. It throws an InvalidOperationException if the bias field cannot be found or read.
+    /// </summary>
+    /// <param name="node"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    private static double ReadPrivateBias(PropagationNode node)
+    {
+        var biasField = typeof(PropagationNode).GetField(
+            "_bias",
+            BindingFlags.Instance | BindingFlags.NonPublic
+        ) ?? throw new InvalidOperationException(
+                "Das private Feld 'bias' wurde nicht gefunden."
+            );
+        return (double)(
+            biasField.GetValue(node)
+            ?? throw new InvalidOperationException(
+                "Der Bias-Wert konnte nicht gelesen werden."
+            )
+        );
     }
 
     /// <summary>

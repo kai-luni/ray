@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace ray
 {
     public class PropagationNode
     {
-        //bias
-        private readonly double bias;
+        //bias that is also upgraded during backpropagation
+        private double _bias;
+        //learning rate for backpropagation
+        public double _learningRate;
 
         //debug mode
         public bool debug = false;
@@ -35,14 +35,22 @@ namespace ray
         //the value of this node, it will be forwarded to the next nodes when all messages arrived
         private List<double> values;
 
-        public PropagationNode(int layer, double bias, string weight_name = "noname")
+        /// <summary>
+        /// Initializes a new instance of the PropagationNode class with the specified layer, bias, weight name, and learning rate. The node will be part of a neural network and will handle forward and backward propagation of values and errors.
+        /// </summary>
+        /// <param name="layer"></param>
+        /// <param name="bias"></param>
+        /// <param name="weight_name"></param>
+        /// <param name="learning_rate"></param>
+        public PropagationNode(int layer, double bias, string weight_name = "noname", double learning_rate = 0.1)
         {
-            this.bias = bias;
+            _bias = bias;
+            _learningRate = learning_rate;
             name = weight_name;
             this.layer = layer;
-            connectorBackward = new List<NodeConnector>();
-            connectorForward = new List<NodeConnector>();
-            values = new List<double>();
+            connectorBackward = [];
+            connectorForward = [];
+            values = [];
             messagesArrivedFromForward = 0;
         }
 
@@ -70,17 +78,17 @@ namespace ray
             }
             messagesArrivedFromForward = 0;
 
-            finalValue = Sigmoid(values.Sum() + bias);
+            finalValue = Sigmoid(values.Sum() + _bias);
             if(debug)
             {
-                Console.WriteLine($"PropNode {name}: net_input {values.Sum() + bias} ,final {finalValue}, Values: [{string.Join(", ", values)}], bias: {bias}");
+                Console.WriteLine($"PropNode {name}: net_input {values.Sum() + _bias} ,final {finalValue}, Values: [{string.Join(", ", values)}], bias: {_bias}");
             }
 
             foreach (var nodeForward in connectorForward)
             {
                 nodeForward.ForwardValue(finalValue);
             }
-            values = new List<double>();
+            values = [];
 
             return;
         }
@@ -125,73 +133,87 @@ namespace ray
         /// <param name="errorFromAhead">error value calculated for this branch from forward</param>
         /// <param name="weightForwardOrig">original weight of the forward connection</param>
         /// <param name="output_node_ahead">the output node ahead in current branch</param>
-        public void Backpropagate(double errorFromAhead, double? weightForwardOrig, double? output_node_ahead)
+        public void Backpropagate(
+            double errorFromAhead,
+            double? weightForwardOrig,
+            double? output_node_ahead)
         {
-            double output_to_sum = finalValue * (1 - finalValue);
-            double output_ahead_to_sum = output_node_ahead * (1 - output_node_ahead) ?? 1.0;
-            double error_temp = output_ahead_to_sum * errorFromAhead * (weightForwardOrig ?? 1.0) * output_to_sum;
-            _errorValues.Add(error_temp);
-            if (debug)
-            {
-                Console.WriteLine($"Backpropagate PropNode {name}: PartError {_errorValues.Count}: {error_temp} = output_ahead_to_sum:{output_ahead_to_sum} * errorFromAhead:{errorFromAhead} * weightForwardOrig:{weightForwardOrig ?? 1.0} * output_to_sum:{output_to_sum}");
-            }
-            
-            // we are not ready to backpropagate yet, we need to wait for all messages from forward
-            if (_errorValues.Count < connectorForward.Count)
+            double currentNodeDerivative =
+                finalValue * (1.0 - finalValue);
+
+            double nextNodeDerivative =
+                output_node_ahead.HasValue
+                    ? output_node_ahead.Value
+                        * (1.0 - output_node_ahead.Value)
+                    : 1.0;
+
+            double errorContribution =
+                nextNodeDerivative
+                * errorFromAhead
+                * (weightForwardOrig ?? 1.0)
+                * currentNodeDerivative;
+
+            _errorValues.Add(errorContribution);
+
+            int expectedContributions =
+                connectorForward.Count == 0
+                    ? 1
+                    : connectorForward.Count;
+
+            if (_errorValues.Count < expectedContributions)
             {
                 return;
             }
-            // error state: too many error values in memory, when connectorForward Count is 0, then we expect one error, because its the output node
-            if (connectorForward.Count == 0 && _errorValues.Count > 1 || connectorForward.Count > 0 &&  _errorValues.Count > connectorForward.Count)
+
+            if (_errorValues.Count > expectedContributions)
             {
-                throw new Exception($"Backpropagate PropNode {name}: Error: _errorValues.Count {_errorValues.Count} > connectorForward.Count {connectorForward.Count}");
+                throw new InvalidOperationException(
+                    $"Backpropagate PropNode {name}: " +
+                    $"expected {expectedContributions} error contributions, " +
+                    $"but received {_errorValues.Count}."
+                );
             }
 
             try
             {
-                messagesArrivedFromForward = 0;
-    
-                //calculate the error for each weight before
+                // dLoss / dNetInput dieses Knotens
+                double nodeDelta = _errorValues.Sum();
+
+                // Input Nodes haben in deinem Aufbau keinen verwendeten Bias.
+                if (connectorBackward.Count > 0)
+                {
+                    double oldBias = _bias;
+
+                    _bias -= _learningRate * nodeDelta;
+
+                    if (debug)
+                    {
+                        Console.WriteLine(
+                            $"PropNode {name}: Bias update: " +
+                            $"{oldBias} -= {_learningRate} * {nodeDelta}; " +
+                            $"new bias: {_bias}"
+                        );
+                    }
+                }
+
                 foreach (var nodeBackward in connectorBackward)
                 {
-                    double errorToApplyBackward = 0; 
-                    for(int i = 0; i < _errorValues.Count; i++)
-                    {
-                        var errorTemp = _errorValues[i] * nodeBackward.out_value;
-                        errorToApplyBackward += errorTemp;
-                        if(debug)
-                        {
-                            Console.WriteLine($"PropNode {name}: error {i+1}: error_temp:{errorTemp} = {_errorValues[i]} * nodeBackward.out_value:{nodeBackward.out_value}");
-                        }
-                    }
-    
-                    nodeBackward.Backpropagate(errorToApplyBackward, finalValue, errorFromAhead);
+                    // Gradient eines Gewichts:
+                    // Knoten-Delta × Ausgabe des vorherigen Knotens
+                    double weightGradient =
+                        nodeDelta * nodeBackward.out_value;
+
+                    nodeBackward.Backpropagate(
+                        weightGradient,
+                        finalValue,
+                        errorFromAhead
+                    );
                 }
             }
             finally
             {
-                //we are done, clear the error values for next round
-                _errorValues.Clear();                
+                _errorValues.Clear();
             }
-
-            return;
-
-
-            // //we need to know all the weights combined
-            // double weightsBeforeCombined = connectorBackward.Sum(x => x.weight);
-
-            // //weight update related
-            // double weightUpdatePartTwo = finalValue * (1 - finalValue);
-            // double weightUpdateBackward = errorBackProp * weightUpdatePartTwo;
-
-            // //calculate the error for each weight before
-            // foreach (var nodeBackward in connectorBackward)
-            // {
-            //     double shareNodeConnection = nodeBackward.weight / weightsBeforeCombined;
-            //     double errorConnection = shareNodeConnection * errorBackProp;
-            //     nodeBackward.Backpropagate(errorConnection, weightUpdateBackward);
-            // }
-
         }
     }
 }
