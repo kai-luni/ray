@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ray;
+using ray.helper;
 
 namespace ray_test
 {
@@ -409,12 +410,6 @@ namespace ray_test
             Assert.AreEqual(0.0, smallest_error, 0.01);
         }
 
-        static double XavierWeight(Random random, int fanIn, int fanOut)
-        {
-            double limit = Math.Sqrt(6.0 / (fanIn + fanOut));
-            return (random.NextDouble() * 2.0 - 1.0) * limit;
-        }
-
         /// <summary>
         /// check a larger network if it minimizes the error with two samples
         /// </summary>
@@ -426,27 +421,7 @@ namespace ray_test
             var learning_rate = 0.5;
             int iterations = 100000;
 
-            List<double> weights_layer_one = [];
-            for (int i = 0; i < layer_sizes[0] * layer_sizes[1]; i++)
-            {
-                weights_layer_one.Add(
-                    XavierWeight(rand, layer_sizes[0], layer_sizes[1]));
-            }
-
-            List<double> weights_layer_two = [];
-            for (int i = 0; i < layer_sizes[1] * layer_sizes[2]; i++)
-            {
-                weights_layer_two.Add(
-                    XavierWeight(rand, layer_sizes[1], layer_sizes[2]));
-            }
-
-            List<double> weights_layer_three = [];
-            for (int i = 0; i < layer_sizes[2] * layer_sizes[3]; i++)
-            {
-                weights_layer_three.Add(
-                    XavierWeight(rand, layer_sizes[2], layer_sizes[3]));
-            }
-            List<List<double>> weights = [weights_layer_one, weights_layer_two, weights_layer_three];
+            List<List<double>> weights = ModelHelper.XavierWeights(rand, layer_sizes);
             var neural_net = new NeuralNet(layer_sizes, weights, [0.0, 0.35, 0.4, 0.6], [], learning_rate);
 
 
@@ -481,27 +456,7 @@ namespace ray_test
             var layer_sizes = new List<int>(){2,32,64,1};
             var learning_rate = 0.5;
             var rand = new Random(); 
-            List<double> weights_layer_one = [];
-            for (int i = 0; i < layer_sizes[0] * layer_sizes[1]; i++)
-            {
-                weights_layer_one.Add(
-                    XavierWeight(rand, layer_sizes[0], layer_sizes[1]));
-            }
-
-            List<double> weights_layer_two = [];
-            for (int i = 0; i < layer_sizes[1] * layer_sizes[2]; i++)
-            {
-                weights_layer_two.Add(
-                    XavierWeight(rand, layer_sizes[1], layer_sizes[2]));
-            }
-
-            List<double> weights_layer_three = [];
-            for (int i = 0; i < layer_sizes[2] * layer_sizes[3]; i++)
-            {
-                weights_layer_three.Add(
-                    XavierWeight(rand, layer_sizes[2], layer_sizes[3]));
-            }
-            List<List<double>> weights = [weights_layer_one, weights_layer_two, weights_layer_three];
+            List<List<double>> weights = ModelHelper.XavierWeights(rand, layer_sizes);
 
             var neural_net = new NeuralNet(layer_sizes, weights, [0.0, 0.35, 0.6, 0.3], [], learning_rate);
 
