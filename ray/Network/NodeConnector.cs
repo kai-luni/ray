@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace ray
 {
-    public class NodeConnector
+    public class NodeConnector(double weight, string name = "noname", double learning_rate = 0.1)
     {
         //debug mode
         public bool debug = false; 
 
-        private readonly double learning_rate;
+        private readonly double learning_rate = learning_rate;
 
         //name of the node
-        public string name;
+        public string name = name;
 
         //all the nodes
         PropagationNode nodeForward;
@@ -22,15 +21,8 @@ namespace ray
         public double out_value;
 
         //weight of this connection
-        public double weight;
+        public double weight = weight;
         public double errorBackProp;
-
-        public NodeConnector(double weight, string name = "noname", double learning_rate = 0.1)
-        {
-            this.weight = weight;
-            this.name = name;
-            this.learning_rate = learning_rate;
-        }
 
         /// <summary>
         /// connect all_nodes layers with all_nod_connectors (weights)

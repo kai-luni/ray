@@ -1072,9 +1072,7 @@ public class BackpropTest
             );
         }
 
-        return connectors
-            .Select(connector => connector.weight)
-            .ToArray();
+        return [.. connectors.Select(connector => connector.weight)];
     }
 }
 
