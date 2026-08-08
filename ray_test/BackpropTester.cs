@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ray;
+using ray.Network;
 
 namespace ray_test;
 
@@ -670,6 +671,536 @@ public class BackpropTest
             Math.Abs(outputBiasAfter - outputBiasBefore) > 1e-12,
             "Der Bias des Output Nodes wurde durch Backpropagation nicht aktualisiert."
         );
+    }
+
+    [TestMethod]
+    public void BackpropagationGradientFailsWithMultipleHiddenLayers()
+    {
+        const double epsilon = 1e-5;
+        const double learningRate = 0.001;
+        const double tolerance = 1e-5;
+
+        const double input = 0.5;
+        const double target = 0.8;
+
+        // i -> h1 -> h2 -> o
+        double[] initialWeights =
+        [
+            0.4,   // w1: input -> hidden1
+            0.6,   // w2: hidden1 -> hidden2
+            0.7    // w3: hidden2 -> output
+        ];
+
+        //
+        // 1. Numerischen Gradient für w1 bestimmen
+        //
+        var weightsPlus = (double[])initialWeights.Clone();
+        var weightsMinus = (double[])initialWeights.Clone();
+
+        weightsPlus[0] += epsilon;
+        weightsMinus[0] -= epsilon;
+
+        double lossPlus = CalculateFourLayerLoss(
+            input,
+            target,
+            weightsPlus
+        );
+
+        double lossMinus = CalculateFourLayerLoss(
+            input,
+            target,
+            weightsMinus
+        );
+
+        double numericalGradient =
+            (lossPlus - lossMinus) / (2.0 * epsilon);
+
+        //
+        // 2. Gradient der echten Backpropagation bestimmen
+        //
+        var inputNode =
+            new PropagationNode(1, 0.0, "i1");
+
+        var hiddenNodeOne =
+            new PropagationNode(2, 0.1, "h1");
+
+        var hiddenNodeTwo =
+            new PropagationNode(3, 0.1, "h2");
+
+        var outputNode =
+            new PropagationNode(4, -0.05, "o1");
+
+        var connectorOne = new NodeConnector(
+            initialWeights[0],
+            "w1",
+            learningRate
+        );
+
+        var connectorTwo = new NodeConnector(
+            initialWeights[1],
+            "w2",
+            learningRate
+        );
+
+        var connectorThree = new NodeConnector(
+            initialWeights[2],
+            "w3",
+            learningRate
+        );
+
+        var inputNodes = new List<PropagationNode>
+        {
+            inputNode
+        };
+
+        var hiddenNodesOne = new List<PropagationNode>
+        {
+            hiddenNodeOne
+        };
+
+        var hiddenNodesTwo = new List<PropagationNode>
+        {
+            hiddenNodeTwo
+        };
+
+        var outputNodes = new List<PropagationNode>
+        {
+            outputNode
+        };
+
+        var connectorsOne = new List<NodeConnector>
+        {
+            connectorOne
+        };
+
+        var connectorsTwo = new List<NodeConnector>
+        {
+            connectorTwo
+        };
+
+        var connectorsThree = new List<NodeConnector>
+        {
+            connectorThree
+        };
+
+        NodeConnector.AddNodeConnectors(
+            ref inputNodes,
+            ref connectorsOne,
+            ref hiddenNodesOne
+        );
+
+        NodeConnector.AddNodeConnectors(
+            ref hiddenNodesOne,
+            ref connectorsTwo,
+            ref hiddenNodesTwo
+        );
+
+        NodeConnector.AddNodeConnectors(
+            ref hiddenNodesTwo,
+            ref connectorsThree,
+            ref outputNodes
+        );
+
+        var neuralNet = new NeuralNet(
+            ref inputNodes,
+            ref outputNodes
+        );
+
+        double originalWeight = connectorOne.weight;
+
+        var outputs = neuralNet.ForwardValues([input]);
+
+        neuralNet.Backpropagate(
+        [
+            outputs[0] - target
+        ]);
+
+        double updatedWeight = connectorOne.weight;
+
+        double backpropGradient =
+            (originalWeight - updatedWeight)
+            / learningRate;
+
+        double difference = Math.Abs(
+            numericalGradient - backpropGradient
+        );
+
+        Console.WriteLine($"Output:             {outputs[0]:F10}");
+        Console.WriteLine($"Numerical gradient: {numericalGradient:F10}");
+        Console.WriteLine($"Backprop gradient:  {backpropGradient:F10}");
+        Console.WriteLine($"Difference:         {difference:E10}");
+
+        Assert.AreEqual(
+            numericalGradient,
+            backpropGradient,
+            tolerance,
+            "Der Gradient über mehrere Hidden Layer stimmt nicht."
+        );
+    }
+
+    [TestMethod]
+    public void BackpropagationGradientsMatchNumericalGradients_FourLayerNetwork()
+    {
+        const double epsilon = 1e-5;
+        const double learningRate = 0.001;
+        const double tolerance = 1e-5;
+
+        const double input = 0.5;
+        const double target = 0.8;
+
+        // Netzwerk:
+        //
+        // input --w1--> h1 --w2--> h2 --w3--> output
+        //
+        double[] initialWeights =
+        [
+            0.4, // w1: input -> h1
+            0.6, // w2: h1 -> h2
+            0.7  // w3: h2 -> output
+        ];
+
+        var numericalGradients =
+            new double[initialWeights.Length];
+
+        //
+        // 1. Numerische Gradienten für ALLE Gewichte berechnen
+        //
+        for (int i = 0; i < initialWeights.Length; i++)
+        {
+            var weightsPlus =
+                (double[])initialWeights.Clone();
+
+            var weightsMinus =
+                (double[])initialWeights.Clone();
+
+            weightsPlus[i] += epsilon;
+            weightsMinus[i] -= epsilon;
+
+            double lossPlus =
+                CalculateFourLayerLoss(
+                    input,
+                    target,
+                    weightsPlus
+                );
+
+            double lossMinus =
+                CalculateFourLayerLoss(
+                    input,
+                    target,
+                    weightsMinus
+                );
+
+            numericalGradients[i] =
+                (lossPlus - lossMinus)
+                / (2.0 * epsilon);
+        }
+
+        //
+        // 2. Frisches Netzwerk für Backpropagation erstellen
+        //
+        var inputNode =
+            new PropagationNode(
+                1,
+                0.0,
+                "i1"
+            );
+
+        var hiddenNodeOne =
+            new PropagationNode(
+                2,
+                0.1,
+                "h1"
+            );
+
+        var hiddenNodeTwo =
+            new PropagationNode(
+                3,
+                0.1,
+                "h2"
+            );
+
+        var outputNode =
+            new PropagationNode(
+                4,
+                -0.05,
+                "o1"
+            );
+
+        var connectorOne =
+            new NodeConnector(
+                initialWeights[0],
+                "w1",
+                learningRate
+            );
+
+        var connectorTwo =
+            new NodeConnector(
+                initialWeights[1],
+                "w2",
+                learningRate
+            );
+
+        var connectorThree =
+            new NodeConnector(
+                initialWeights[2],
+                "w3",
+                learningRate
+            );
+
+        var inputNodes =
+            new List<PropagationNode>
+            {
+                inputNode
+            };
+
+        var hiddenNodesOne =
+            new List<PropagationNode>
+            {
+                hiddenNodeOne
+            };
+
+        var hiddenNodesTwo =
+            new List<PropagationNode>
+            {
+                hiddenNodeTwo
+            };
+
+        var outputNodes =
+            new List<PropagationNode>
+            {
+                outputNode
+            };
+
+        var connectorsOne =
+            new List<NodeConnector>
+            {
+                connectorOne
+            };
+
+        var connectorsTwo =
+            new List<NodeConnector>
+            {
+                connectorTwo
+            };
+
+        var connectorsThree =
+            new List<NodeConnector>
+            {
+                connectorThree
+            };
+
+        NodeConnector.AddNodeConnectors(
+            ref inputNodes,
+            ref connectorsOne,
+            ref hiddenNodesOne
+        );
+
+        NodeConnector.AddNodeConnectors(
+            ref hiddenNodesOne,
+            ref connectorsTwo,
+            ref hiddenNodesTwo
+        );
+
+        NodeConnector.AddNodeConnectors(
+            ref hiddenNodesTwo,
+            ref connectorsThree,
+            ref outputNodes
+        );
+
+        var neuralNet =
+            new NeuralNet(
+                ref inputNodes,
+                ref outputNodes
+            );
+
+        NodeConnector[] connectors =
+        [
+            connectorOne,
+            connectorTwo,
+            connectorThree
+        ];
+
+        //
+        // Gewichte vor Backprop speichern
+        //
+        var originalWeights =
+            connectors
+                .Select(connector => connector.weight)
+                .ToArray();
+
+        //
+        // 3. Forward Pass
+        //
+        var outputs =
+            neuralNet.ForwardValues(
+            [
+                input
+            ]);
+
+        //
+        // 4. Backpropagation
+        //
+        neuralNet.Backpropagate(
+        [
+            outputs[0] - target
+        ]);
+
+        //
+        // 5. Backprop-Gradienten aus den Weight-Updates rekonstruieren
+        //
+        var backpropGradients =
+            new double[connectors.Length];
+
+        var differences =
+            new double[connectors.Length];
+
+        for (int i = 0; i < connectors.Length; i++)
+        {
+            backpropGradients[i] =
+                (originalWeights[i] - connectors[i].weight)
+                / learningRate;
+
+            differences[i] =
+                Math.Abs(
+                    numericalGradients[i]
+                    - backpropGradients[i]
+                );
+        }
+
+        //
+        // 6. ZUERST alle Ergebnisse ausgeben
+        //
+        Console.WriteLine(
+            $"Output: {outputs[0]:F10}"
+        );
+
+        Console.WriteLine();
+
+        for (int i = 0; i < connectors.Length; i++)
+        {
+            Console.WriteLine(
+                $"{connectors[i].name}:"
+            );
+
+            Console.WriteLine(
+                $"  Numerical:  {numericalGradients[i]:F10}"
+            );
+
+            Console.WriteLine(
+                $"  Backprop:   {backpropGradients[i]:F10}"
+            );
+
+            Console.WriteLine(
+                $"  Difference: {differences[i]:E10}"
+            );
+
+            Console.WriteLine();
+        }
+
+        //
+        // 7. ERST DANACH Assertions durchführen
+        //
+        for (int i = 0; i < connectors.Length; i++)
+        {
+            Assert.AreEqual(
+                numericalGradients[i],
+                backpropGradients[i],
+                tolerance,
+                $"Der Gradient von {connectors[i].name} stimmt nicht."
+            );
+        }
+    }
+
+    private static double CalculateFourLayerLoss(
+        double input,
+        double target,
+        double[] weights)
+    {
+        var inputNode =
+            new PropagationNode(1, 0.0, "i1");
+
+        var hiddenNodeOne =
+            new PropagationNode(2, 0.1, "h1");
+
+        var hiddenNodeTwo =
+            new PropagationNode(3, 0.1, "h2");
+
+        var outputNode =
+            new PropagationNode(4, -0.05, "o1");
+
+        var connectorOne =
+            new NodeConnector(weights[0], "w1");
+
+        var connectorTwo =
+            new NodeConnector(weights[1], "w2");
+
+        var connectorThree =
+            new NodeConnector(weights[2], "w3");
+
+        var inputNodes = new List<PropagationNode>
+        {
+            inputNode
+        };
+
+        var hiddenNodesOne = new List<PropagationNode>
+        {
+            hiddenNodeOne
+        };
+
+        var hiddenNodesTwo = new List<PropagationNode>
+        {
+            hiddenNodeTwo
+        };
+
+        var outputNodes = new List<PropagationNode>
+        {
+            outputNode
+        };
+
+        var connectorsOne = new List<NodeConnector>
+        {
+            connectorOne
+        };
+
+        var connectorsTwo = new List<NodeConnector>
+        {
+            connectorTwo
+        };
+
+        var connectorsThree = new List<NodeConnector>
+        {
+            connectorThree
+        };
+
+        NodeConnector.AddNodeConnectors(
+            ref inputNodes,
+            ref connectorsOne,
+            ref hiddenNodesOne
+        );
+
+        NodeConnector.AddNodeConnectors(
+            ref hiddenNodesOne,
+            ref connectorsTwo,
+            ref hiddenNodesTwo
+        );
+
+        NodeConnector.AddNodeConnectors(
+            ref hiddenNodesTwo,
+            ref connectorsThree,
+            ref outputNodes
+        );
+
+        var neuralNet = new NeuralNet(
+            ref inputNodes,
+            ref outputNodes
+        );
+
+        double output =
+            neuralNet.ForwardValues([input])[0];
+
+        double error = output - target;
+
+        return 0.5 * error * error;
     }
 
     /// <summary>

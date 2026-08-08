@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ray;
 using ray.helper;
+using ray.Network;
 
 namespace ray_test;
 
