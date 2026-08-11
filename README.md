@@ -1,6 +1,10 @@
 # ray
 Building a Neural Network with "Inventing on Principle" in mind
 
+2026-08-09
+
+I am back! I have been working on other projects for a while. I will continue working on this project. I created tests, that check if the backpropagation works correctly. This sentence was partly written with AI, please forgive me, its the new Sh*t. A lot of bugs were fixed, this MNIST idea is also cool, will look into it.
+
 2022-05-13
 
 Took two years! Backpropagation is working. Next is testing it on the MNIST database and see if it works reliably. If thats the case then the next goal is to execute it on multiple threads.
