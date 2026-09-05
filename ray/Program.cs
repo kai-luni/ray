@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using ray.helper;
 using ray.Network;
 
@@ -16,30 +15,34 @@ class Program
         // 1. MNIST laden
         //
 
-        var trainData = MnistLoader.Load(
+        var (Images, Labels) = MnistLoader.Load(
             "data/train-images-idx3-ubyte.gz",
             "data/train-labels-idx1-ubyte.gz",
-            maxSamples: 1000
+            maxSamples: 12000
         );
 
         var testData = MnistLoader.Load(
             "data/t10k-images-idx3-ubyte.gz",
             "data/t10k-labels-idx1-ubyte.gz",
-            maxSamples: 200
+            maxSamples: 1000
         );
 
         Console.WriteLine(
-            $"Training samples: {trainData.Images.Count}");
+            $"Training samples: {Images.Count}"
+        );
 
         Console.WriteLine(
-            $"Test samples: {testData.Images.Count}");
+            $"Test samples: {testData.Images.Count}"
+        );
 
         //
-        // 2. Netzwerk
+        // 2. Netzwerk aufbauen
         //
-        // 28 * 28 = 784 Eingabewerte
-        // 32 Hidden Nodes
-        // 10 Outputs für die Ziffern 0-9
+        // MNIST:
+        // 28 x 28 Pixel = 784 Inputs
+        //
+        // Architektur:
+        // 784 -> 32 -> 10
         //
 
         var layerSizes = new List<int>
@@ -78,7 +81,7 @@ class Program
         Console.WriteLine();
         Console.WriteLine("Vor Training:");
 
-        Evaluate(
+        double initialAccuracy = Evaluate(
             neuralNet,
             testData.Images,
             testData.Labels
@@ -87,44 +90,78 @@ class Program
         //
         // 4. Training
         //
-        // iterations bedeutet bei RayTrainer praktisch:
-        // wie oft der komplette Datensatz durchlaufen wird.
-        //
 
-        int epochs = 3;
+        int epochs = 5;
 
         Console.WriteLine();
-        Console.WriteLine("Training...");
+        Console.WriteLine("Training beginnt...");
+        Console.WriteLine();
 
-        RayTrainer.Train(
-            ref neuralNet,
-            trainData.Images,
-            trainData.Labels,
-            epochs,
-            debug_output: true
-        );
+        for (int epoch = 1; epoch <= epochs; epoch++)
+        {
+            //
+            // Eine Iteration von RayTrainer entspricht hier
+            // einer vollständigen Epoche über alle Samples.
+            //
+
+            double error = RayTrainer.Train(
+                ref neuralNet,
+                Images,
+                Labels,
+                iterations: 1,
+                debug_output: false
+            );
+
+            double accuracy = CalculateAccuracy(
+                neuralNet,
+                testData.Images,
+                testData.Labels
+            );
+
+            Console.WriteLine(
+                $"Epoch {epoch}/{epochs} - " +
+                $"Error: {error:F6} - " +
+                $"Test Accuracy: {accuracy:F2} %"
+            );
+        }
 
         //
-        // 5. Nach dem Training testen
+        // 5. Abschließende Auswertung
         //
 
         Console.WriteLine();
         Console.WriteLine("Nach Training:");
 
-        Evaluate(
+        double finalAccuracy = Evaluate(
             neuralNet,
             testData.Images,
             testData.Labels
         );
+
+        Console.WriteLine();
+        Console.WriteLine(
+            $"Verbesserung: " +
+            $"{initialAccuracy:F2} % -> {finalAccuracy:F2} %"
+        );
+
+        //
+        // 6. Einige einzelne Vorhersagen anzeigen
+        //
+
+        Console.WriteLine();
+        Console.WriteLine("Beispielvorhersagen:");
+        Console.WriteLine();
+
+        ShowPredictions(
+            neuralNet,
+            testData.Images,
+            testData.Labels,
+            count: 20
+        );
     }
 
-    /// <summary>
-    /// evaluates the neural network on the given images and labels
-    /// </summary>
-    /// <param name="neuralNet">neural network to evaluate</param>
-    /// <param name="images">images to evaluate</param>
-    /// <param name="labels"></param>
-    private static void Evaluate(
+
+    private static double Evaluate(
         NeuralNet neuralNet,
         List<List<double>> images,
         List<List<double>> labels)
@@ -152,15 +189,79 @@ class Program
             $"Accuracy: {correct}/{images.Count} " +
             $"({accuracy:F2} %)"
         );
+
+        return accuracy;
     }
 
-    /// <summary>
-    /// finds the index of the highest value in a list of doubles
-    /// </summary>
-    /// <param name="values"></param>
-    /// <returns></returns>
-    private static int ArgMax(List<double> values)
+
+    private static double CalculateAccuracy(
+        NeuralNet neuralNet,
+        List<List<double>> images,
+        List<List<double>> labels)
     {
+        int correct = 0;
+
+        for (int i = 0; i < images.Count; i++)
+        {
+            List<double> outputs =
+                neuralNet.ForwardValues(images[i]);
+
+            int prediction = ArgMax(outputs);
+            int expected = ArgMax(labels[i]);
+
+            if (prediction == expected)
+            {
+                correct++;
+            }
+        }
+
+        return (double)correct / images.Count * 100.0;
+    }
+
+
+    private static void ShowPredictions(
+        NeuralNet neuralNet,
+        List<List<double>> images,
+        List<List<double>> labels,
+        int count)
+    {
+        int samplesToShow =
+            Math.Min(count, images.Count);
+
+        for (int i = 0; i < samplesToShow; i++)
+        {
+            List<double> outputs =
+                neuralNet.ForwardValues(images[i]);
+
+            int prediction = ArgMax(outputs);
+            int expected = ArgMax(labels[i]);
+
+            string result =
+                prediction == expected
+                    ? "OK"
+                    : "FALSCH";
+
+            Console.WriteLine(
+                $"Sample {i,3}: " +
+                $"Soll={expected}, " +
+                $"Vorhersage={prediction} " +
+                $"[{result}]"
+            );
+        }
+    }
+
+
+    private static int ArgMax(
+        List<double> values)
+    {
+        if (values.Count == 0)
+        {
+            throw new ArgumentException(
+                "ArgMax benötigt mindestens einen Wert.",
+                nameof(values)
+            );
+        }
+
         int bestIndex = 0;
         double bestValue = values[0];
 
