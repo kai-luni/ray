@@ -1,279 +1,282 @@
 ﻿using System;
 using System.Collections.Generic;
+using ray;
 using ray.helper;
 using ray.Network;
 
-namespace ray;
+var random = new Random(42);
 
-class Program
-{
-    static void Main(string[] args)
-    {
-        var random = new Random(42);
+//
+// 1. MNIST laden
+//
 
-        //
-        // 1. MNIST laden
-        //
+var (Images, Labels) = MnistLoader.Load(
+    "data/train-images-idx3-ubyte.gz",
+    "data/train-labels-idx1-ubyte.gz",
+    maxSamples: 12000
+);
 
-        var (Images, Labels) = MnistLoader.Load(
-            "data/train-images-idx3-ubyte.gz",
-            "data/train-labels-idx1-ubyte.gz",
-            maxSamples: 12000
-        );
+var testData = MnistLoader.Load(
+    "data/t10k-images-idx3-ubyte.gz",
+    "data/t10k-labels-idx1-ubyte.gz",
+    maxSamples: 1000
+);
 
-        var testData = MnistLoader.Load(
-            "data/t10k-images-idx3-ubyte.gz",
-            "data/t10k-labels-idx1-ubyte.gz",
-            maxSamples: 1000
-        );
+Console.WriteLine(
+    $"Training samples: {Images.Count}"
+);
 
-        Console.WriteLine(
-            $"Training samples: {Images.Count}"
-        );
+Console.WriteLine(
+    $"Test samples: {testData.Images.Count}"
+);
 
-        Console.WriteLine(
-            $"Test samples: {testData.Images.Count}"
-        );
+//
+// 2. Netzwerk aufbauen
+//
+// MNIST:
+// 28 x 28 Pixel = 784 Inputs
+//
+// Architektur:
+// 784 -> 32 -> 10
+//
 
-        //
-        // 2. Netzwerk aufbauen
-        //
-        // MNIST:
-        // 28 x 28 Pixel = 784 Inputs
-        //
-        // Architektur:
-        // 784 -> 32 -> 10
-        //
-
-        var layerSizes = new List<int>
+var layerSizes = new List<int>
         {
             784,
             32,
             10
         };
 
-        var weights = ModelHelper.XavierWeights(
-            random,
-            layerSizes
-        );
+var weights = ModelHelper.XavierWeights(
+    random,
+    layerSizes
+);
 
-        var biases = new List<double>
+var biases = new List<double>
         {
             0.0,
             0.0,
             0.0
         };
 
-        double learningRate = 0.1;
+double learningRate = 0.1;
 
-        var neuralNet = new NeuralNet(
-            layerSizes,
-            weights,
-            biases,
-            [],
-            learningRate
-        );
+var neuralNet = new NeuralNet(
+    layerSizes,
+    weights,
+    biases,
+    [],
+    learningRate
+);
 
-        //
-        // 3. Vor dem Training testen
-        //
+//
+// 3. Vor dem Training testen
+//
 
-        Console.WriteLine();
-        Console.WriteLine("Vor Training:");
+Console.WriteLine();
+Console.WriteLine("Vor Training:");
 
-        double initialAccuracy = Evaluate(
-            neuralNet,
-            testData.Images,
-            testData.Labels
-        );
+double initialAccuracy = Evaluate(
+    neuralNet,
+    testData.Images,
+    testData.Labels
+);
 
-        //
-        // 4. Training
-        //
+//
+// 4. Training
+//
 
-        int epochs = 5;
+int epochs = 5;
 
-        Console.WriteLine();
-        Console.WriteLine("Training beginnt...");
-        Console.WriteLine();
+Console.WriteLine();
+Console.WriteLine("Training beginnt...");
+Console.WriteLine();
 
-        for (int epoch = 1; epoch <= epochs; epoch++)
+for (int epoch = 1; epoch <= epochs; epoch++)
+{
+    //
+    // Eine Iteration von RayTrainer entspricht hier
+    // einer vollständigen Epoche über alle Samples.
+    //
+
+    double error = RayTrainer.Train(
+        ref neuralNet,
+        Images,
+        Labels,
+        iterations: 1,
+        debug_output: false
+    );
+
+    double accuracy = CalculateAccuracy(
+        neuralNet,
+        testData.Images,
+        testData.Labels
+    );
+
+    Console.WriteLine(
+        $"Epoch {epoch}/{epochs} - " +
+        $"Error: {error:F6} - " +
+        $"Test Accuracy: {accuracy:F2} %"
+    );
+}
+
+//
+// 5. Abschließende Auswertung
+//
+
+Console.WriteLine();
+Console.WriteLine("Nach Training:");
+
+double finalAccuracy = Evaluate(
+    neuralNet,
+    testData.Images,
+    testData.Labels
+);
+
+Console.WriteLine();
+Console.WriteLine(
+    $"Verbesserung: " +
+    $"{initialAccuracy:F2} % -> {finalAccuracy:F2} %"
+);
+
+//
+// 6. Einige einzelne Vorhersagen anzeigen
+//
+
+Console.WriteLine();
+Console.WriteLine("Beispielvorhersagen:");
+Console.WriteLine();
+
+ShowPredictions(
+    neuralNet,
+    testData.Images,
+    testData.Labels,
+    count: 20
+);
+
+
+/// <summary>
+/// Calculate accuracy on a dataset.
+/// </summary>
+double Evaluate(
+    NeuralNet neuralNet,
+    List<List<double>> images,
+    List<List<double>> labels)
+{
+    int correct = 0;
+
+    for (int i = 0; i < images.Count; i++)
+    {
+        List<double> outputs =
+            neuralNet.ForwardValues(images[i]);
+
+        int prediction = ArgMax(outputs);
+        int expected = ArgMax(labels[i]);
+
+        if (prediction == expected)
         {
-            //
-            // Eine Iteration von RayTrainer entspricht hier
-            // einer vollständigen Epoche über alle Samples.
-            //
-
-            double error = RayTrainer.Train(
-                ref neuralNet,
-                Images,
-                Labels,
-                iterations: 1,
-                debug_output: false
-            );
-
-            double accuracy = CalculateAccuracy(
-                neuralNet,
-                testData.Images,
-                testData.Labels
-            );
-
-            Console.WriteLine(
-                $"Epoch {epoch}/{epochs} - " +
-                $"Error: {error:F6} - " +
-                $"Test Accuracy: {accuracy:F2} %"
-            );
+            correct++;
         }
+    }
 
-        //
-        // 5. Abschließende Auswertung
-        //
+    double accuracy =
+        (double)correct / images.Count * 100.0;
 
-        Console.WriteLine();
-        Console.WriteLine("Nach Training:");
+    Console.WriteLine(
+        $"Accuracy: {correct}/{images.Count} " +
+        $"({accuracy:F2} %)"
+    );
 
-        double finalAccuracy = Evaluate(
-            neuralNet,
-            testData.Images,
-            testData.Labels
-        );
+    return accuracy;
+}
 
-        Console.WriteLine();
+
+/// <summary>
+/// Calculate accuracy on a dataset.
+/// </summary>
+double CalculateAccuracy(
+    NeuralNet neuralNet,
+    List<List<double>> images,
+    List<List<double>> labels)
+{
+    int correct = 0;
+
+    for (int i = 0; i < images.Count; i++)
+    {
+        List<double> outputs =
+            neuralNet.ForwardValues(images[i]);
+
+        int prediction = ArgMax(outputs);
+        int expected = ArgMax(labels[i]);
+
+        if (prediction == expected)
+        {
+            correct++;
+        }
+    }
+
+    return (double)correct / images.Count * 100.0;
+}
+
+/// <summary>
+/// Show some individual predictions.
+/// </summary>
+void ShowPredictions(
+    NeuralNet neuralNet,
+    List<List<double>> images,
+    List<List<double>> labels,
+    int count)
+{
+    int samplesToShow =
+        Math.Min(count, images.Count);
+
+    for (int i = 0; i < samplesToShow; i++)
+    {
+        List<double> outputs =
+            neuralNet.ForwardValues(images[i]);
+
+        int prediction = ArgMax(outputs);
+        int expected = ArgMax(labels[i]);
+
+        string result =
+            prediction == expected
+                ? "OK"
+                : "FALSCH";
+
         Console.WriteLine(
-            $"Verbesserung: " +
-            $"{initialAccuracy:F2} % -> {finalAccuracy:F2} %"
-        );
-
-        //
-        // 6. Einige einzelne Vorhersagen anzeigen
-        //
-
-        Console.WriteLine();
-        Console.WriteLine("Beispielvorhersagen:");
-        Console.WriteLine();
-
-        ShowPredictions(
-            neuralNet,
-            testData.Images,
-            testData.Labels,
-            count: 20
+            $"Sample {i,3}: " +
+            $"Soll={expected}, " +
+            $"Vorhersage={prediction} " +
+            $"[{result}]"
         );
     }
+}
 
-
-    private static double Evaluate(
-        NeuralNet neuralNet,
-        List<List<double>> images,
-        List<List<double>> labels)
+/// <summary>
+/// Determine the index of the largest value.
+/// </summary>
+int ArgMax(
+    List<double> values)
+{
+    if (values.Count == 0)
     {
-        int correct = 0;
-
-        for (int i = 0; i < images.Count; i++)
-        {
-            List<double> outputs =
-                neuralNet.ForwardValues(images[i]);
-
-            int prediction = ArgMax(outputs);
-            int expected = ArgMax(labels[i]);
-
-            if (prediction == expected)
-            {
-                correct++;
-            }
-        }
-
-        double accuracy =
-            (double)correct / images.Count * 100.0;
-
-        Console.WriteLine(
-            $"Accuracy: {correct}/{images.Count} " +
-            $"({accuracy:F2} %)"
+        throw new ArgumentException(
+            "ArgMax benötigt mindestens einen Wert.",
+            nameof(values)
         );
-
-        return accuracy;
     }
 
+    int bestIndex = 0;
+    double bestValue = values[0];
 
-    private static double CalculateAccuracy(
-        NeuralNet neuralNet,
-        List<List<double>> images,
-        List<List<double>> labels)
+    for (int i = 1; i < values.Count; i++)
     {
-        int correct = 0;
-
-        for (int i = 0; i < images.Count; i++)
+        if (values[i] > bestValue)
         {
-            List<double> outputs =
-                neuralNet.ForwardValues(images[i]);
-
-            int prediction = ArgMax(outputs);
-            int expected = ArgMax(labels[i]);
-
-            if (prediction == expected)
-            {
-                correct++;
-            }
-        }
-
-        return (double)correct / images.Count * 100.0;
-    }
-
-
-    private static void ShowPredictions(
-        NeuralNet neuralNet,
-        List<List<double>> images,
-        List<List<double>> labels,
-        int count)
-    {
-        int samplesToShow =
-            Math.Min(count, images.Count);
-
-        for (int i = 0; i < samplesToShow; i++)
-        {
-            List<double> outputs =
-                neuralNet.ForwardValues(images[i]);
-
-            int prediction = ArgMax(outputs);
-            int expected = ArgMax(labels[i]);
-
-            string result =
-                prediction == expected
-                    ? "OK"
-                    : "FALSCH";
-
-            Console.WriteLine(
-                $"Sample {i,3}: " +
-                $"Soll={expected}, " +
-                $"Vorhersage={prediction} " +
-                $"[{result}]"
-            );
+            bestValue = values[i];
+            bestIndex = i;
         }
     }
 
-
-    private static int ArgMax(
-        List<double> values)
-    {
-        if (values.Count == 0)
-        {
-            throw new ArgumentException(
-                "ArgMax benötigt mindestens einen Wert.",
-                nameof(values)
-            );
-        }
-
-        int bestIndex = 0;
-        double bestValue = values[0];
-
-        for (int i = 1; i < values.Count; i++)
-        {
-            if (values[i] > bestValue)
-            {
-                bestValue = values[i];
-                bestIndex = i;
-            }
-        }
-
-        return bestIndex;
-    }
+    return bestIndex;
 }
